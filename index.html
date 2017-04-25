@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="data.js"></script>
+    <script src="roam.js"></script>
+    <title>Roam Report</title>
+</head>
+<body>
+    Usage: Paste fleet members (1 per line), then select start date and hour, and end date and hour of the roam.
+    <br>
+    All fields must be used!
+    <br>
+    <textarea name="names" rows="4" cols="80">
+    </textarea>
+    <br>
+    Start Date: <input type="date" name="startdate">
+    <br>
+    Start Time: <input type="number" name="starttime" min="0" max="23" value=0>
+    <br>
+    End Date: <input type="date" name="enddate">
+    <br>
+    End Time: <input type="number" name="endtime" min="0" max="23" value="0">
+    <br>
+    <button onclick="enter_names()">Submit</button>
+    <br>
+
+    <table name="killdisplay">
+    </table>
+
+    <button onclick="get_forum_post()">Get Forum Template</button>
+    <br>
+    <textarea name="output" rows="4" cols="80" readonly>
+    </textarea>
+</body>
+</html>
