@@ -53,17 +53,25 @@ function enter_names()
     window.killIDs = [];
     window.unsortedKills = [];
     window.friendlies = [];
-    var charNameRegex1 = /\[ (\d\d\d\d.\d\d.\d\d \d\d):\d\d:\d\d \] ([ a-zA-Z0-9-']{3,37}) > /g;
-    // todo: Parse dates from log.
+    var charNameRegex1 = /\[ ([\d\. :]+) \] ([ a-zA-Z0-9-']{3,37}) > /g;
     var charNameRegex2 = /^\s*([ a-zA-Z0-9-']{3,37})\s*$/g
+
+    window.starttime = undefined;
+    window.endtime = undefined;
 
     for(var i = 0; i < nameList.length; ++i) {
         var line = nameList[i].trim();
         var name = undefined;
-        var match;
+        var match = undefined;
         if ((match = charNameRegex1.exec(line)) !== null) {
             name = match[2].trim();
-        } else if ((match = charNameRegex1.exec(line)) !== null) {
+            var date = new Date("" + match[1] + " GMT");
+            if (window.starttime === undefined) {
+                window.starttime = match[1].replace(/[\. ]/g, "").slice(0, 10);
+            }
+            date.setHours(date.getHours() + 1);
+            window.endtime = date.toISOString().replace(/[-T]/g, "").slice(0,10);
+        } else if ((match = charNameRegex2.exec(line)) !== null) {
             name = match[1].trim();
         }
 
@@ -98,16 +106,9 @@ function enter_names()
 function request_kill_batch(characterIDs, start)
 {
     console.log("Requesting kills for chars: " + start);
+
     var group = characterIDs.slice(start, start+10);
-    var startdate = document.getElementsByName("startdate")[0].value.replace(/-/g, "");
-    var enddate = document.getElementsByName("enddate")[0].value.replace(/-/g, "");
-    var starttime = document.getElementsByName("starttime")[0].value;
-    var endtime = document.getElementsByName("endtime")[0].value;
-
-    if (starttime < 10) starttime = "0" + starttime.toString();
-    if (endtime < 10) endtime = "0" + endtime.toString();
-
-    var killQuery = "https://zkillboard.com/api/characterID/" + group.join() + "/startTime/"+startdate+starttime+"00/endTime/"+enddate+endtime+"00/no-items/";
+    var killQuery = "https://zkillboard.com/api/characterID/" + group.join() + "/startTime/"+window.starttime+"00/endTime/"+window.endtime+"00/no-items/";
     fetch(new Request(killQuery, {method: 'GET', mode: 'cors'}))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
