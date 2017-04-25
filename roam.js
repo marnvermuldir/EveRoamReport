@@ -53,14 +53,26 @@ function enter_names()
     window.killIDs = [];
     window.unsortedKills = [];
     window.friendlies = [];
+    var charNameRegex1 = /\[ (\d\d\d\d.\d\d.\d\d \d\d):\d\d:\d\d \] ([ a-zA-Z0-9-']{3,37}) > /g;
+    // todo: Parse dates from log.
+    var charNameRegex2 = /^\s*([ a-zA-Z0-9-']{3,37})\s*$/g
+
     for(var i = 0; i < nameList.length; ++i) {
-        var name = nameList[i].trim();
-        if (name) {
-            finalNames.push(escape(name));
+        var line = nameList[i].trim();
+        var name = undefined;
+        var match;
+        if ((match = charNameRegex1.exec(line)) !== null) {
+            name = match[2].trim();
+        } else if ((match = charNameRegex1.exec(line)) !== null) {
+            name = match[1].trim();
+        }
+
+        if (name && finalNames.indexOf(name) == -1) {
+            finalNames.push(name);
         }
     }
 
-    var nameQuery = "https://api.eveonline.com/eve/CharacterID.xml.aspx?names=" + finalNames.join();
+    var nameQuery = "https://api.eveonline.com/eve/CharacterID.xml.aspx?names=" + finalNames.map(x => escape(x)).join();
     fetch(new Request(nameQuery, {method: 'GET'}))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
