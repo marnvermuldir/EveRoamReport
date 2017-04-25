@@ -1,8 +1,5 @@
 // TODO:
 //  - Proper UI for list of kills.
-//  - Better date input.
-//      - Also UX for inputting hours (minutes are ignored by zkill API)
-//  - Defaults for date input (end = 4 hours form start).
 //  - Super fast select/deselect kill from final output:
 //      - Click and drag over kills?
 //      - Start/End separators?
@@ -18,15 +15,17 @@
 //      - Custom number formatting for isk values.
 //      - Allow killfeed.eveuni (not sure if worth, kill ids don't match between zkill and killfeed)
 //  - Discuss with Zarquu: Integration with the new SRP system.
-//  - Fleet chat log processing (to get fleet member names).
 //  - Other roam metrics>
 //      - Damage?
 //      - Member participation on kills?
 //      - Time?
 //      - Corps/Alliances involved?
 //      - Losses/Corp?
+//      - Ship kill/loss count?
+//      - Uni members involved?
+//  - Manually add kills?
+//  - Other forms of editing?
 //  - Ship icons?
-//  - Display additional data? (how many fleet members were part of each kill...?)
 //  - Detect missing fleet members?
 //  - Permalinks to roam reports?
 //  - Additional visualisations?
