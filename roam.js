@@ -44,16 +44,6 @@ function kill_sort(a, b)
     return -1;
 }
 
-function shuffle(a) {
-    var j, x, i;
-    for (i = a.length; i; i--) {
-        j = Math.floor(Math.random() * i);
-        x = a[i - 1];
-        a[i - 1] = a[j];
-        a[j] = x;
-    }
-}
-
 function enter_names()
 {
     var elem = document.getElementsByName("names")[0];
@@ -105,8 +95,7 @@ function enter_names()
             var id = parseInt(match[1]);
             if (id != 0) window.friendlies.push(id);
         }
-        // window.friendlies = window.friendlies.sort(numeric_sort);
-        shuffle(window.friendlies);
+        window.friendlies = window.friendlies.sort(numeric_sort);
         console.log("Got character IDs");
         request_kill_batch(window.friendlies, 0);
     })
@@ -119,7 +108,7 @@ function request_kill_batch(characterIDs, start)
 {
     console.log("Requesting kills for chars: " + start);
 
-    var group = characterIDs.slice(start, start+8).sort(numeric_sort);
+    var group = characterIDs.slice(start, start+10);
     var killQuery = "https://zkillboard.com/api/characterID/" + group.join() + "/startTime/"+window.starttime+"00/endTime/"+window.endtime+"00/no-items/";
     fetch(new Request(killQuery, {method: 'GET', mode: 'cors'}))
     .then(response => {
@@ -136,8 +125,8 @@ function request_kill_batch(characterIDs, start)
             killAddCount += 1;
         }
         console.log("Added " + killAddCount + " kills");
-        if (start+8 < characterIDs.length) {
-            request_kill_batch(characterIDs, start+8);
+        if (start+10 < characterIDs.length) {
+            request_kill_batch(characterIDs, start+10);
         } else {
             process_kills();
         }
