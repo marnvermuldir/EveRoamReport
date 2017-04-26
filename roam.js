@@ -220,7 +220,10 @@ function get_forum_post()
 
         if (kill === undefined) continue;
         var friendlyLine = kill.isFriendly ? "FF0000]-" : "00FF00]+";
-        lines.push("[url]https://zkillboard.com/kill/"+kill.killID+"/[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
+        var shipName = window.shipNames["" + kill.victim.shipTypeID];
+        if (shipName === undefined) shipName = "Unknown";
+
+        lines.push("[url=https://zkillboard.com/kill/"+kill.killID+"/]"+shipName+"[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
 
         if (!kill.isFriendly) {
             iskGain += kill.zkb.totalValue;
