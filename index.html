@@ -7,22 +7,29 @@
 </head>
 <body>
 
-    <h1>Roam Report. Do NOT spam requests please, not ok to hurt zkill here...</h1>
-    <p>Usage: Paste the fleet log here:</p>
+    <h1>Roam Report.</h1>
+
+    <h3>Usage:</h3>
+    <p>Wait a while for kills to get updated on zKillboard after the roam has ended. (30-60 mins? no idea how long it takes)</p>
+    <p>Remember to be considerate and not spam zKill with this tool...</p>
+    <p>And paste the fleet log here:</p>
 
     <br>
-    <textarea name="names" rows="4" cols="80">
+    <textarea name="names" rows="6" cols="120">
     </textarea>
     <br>
     <button onclick="enter_names()">Submit</button>
     <br>
 
+    <p>Deselect kills you wish to ignore from the AAR:</p>
+
     <table name="killdisplay">
+<tr><th>Include?</th><th>Time</th><th>Kill/Loss</th><th>Ship</th><th>Victim</th><th>Final Blow</th><th>Location</th><th>ISK</th></tr>
     </table>
 
     <button onclick="get_forum_post()">Get Forum Template</button>
     <br>
-    <textarea name="output" rows="4" cols="80" readonly>
+    <textarea name="output" rows="6" cols="120" readonly>
     </textarea>
 </body>
 </html>
