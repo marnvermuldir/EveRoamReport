@@ -193,7 +193,7 @@ function get_forum_post()
 {
 
     var lines = []
-    lines.push("    Roam members (" + window.finalNames.length + ")");
+    lines.push("    Roam members (" + window.finalNames.length + ") - NOTE: This section is NOT usually included in AARs.");
     window.finalNames = window.finalNames.sort();
     for (var i = 0; i < window.finalNames.length; ++i) {
         lines.push(window.finalNames[i]);
