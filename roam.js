@@ -48,7 +48,7 @@ function enter_names()
 {
     var elem = document.getElementsByName("names")[0];
     var nameList = elem.value.split("\n");
-    var finalNames = [];
+    window.finalNames = [];
     window.killIDs = [];
     window.unsortedKills = [];
     window.friendlies = [];
@@ -74,14 +74,15 @@ function enter_names()
             name = match[1].trim();
         }
 
-        if (name && finalNames.indexOf(name) == -1) {
-            finalNames.push(name);
+        // If the player named "EVE System" ever becomes active, this script will no longer be accurate.
+        if (name && name != "EVE System" && window.finalNames.indexOf(name) == -1) {
+            window.finalNames.push(name);
         }
     }
 
-    console.log("Players involved:" + finalNames);
+    console.log("Players involved:" + window.finalNames);
 
-    var nameQuery = "https://api.eveonline.com/eve/CharacterID.xml.aspx?names=" + finalNames.map(x => escape(x)).join();
+    var nameQuery = "https://api.eveonline.com/eve/CharacterID.xml.aspx?names=" + window.finalNames.map(x => escape(x)).join();
     fetch(new Request(nameQuery, {method: 'GET'}))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
@@ -190,7 +191,15 @@ function process_kills()
 
 function get_forum_post()
 {
-    var lines = [];
+
+    var lines = []
+    lines.push("    Roam members (" + window.finalNames.length + ")");
+    window.finalNames = window.finalNames.sort();
+    for (var i = 0; i < window.finalNames.length; ++i) {
+        lines.push(window.finalNames[i]);
+    }
+    lines.push("\n    Kills and Losses");
+
     var checkboxes = document.getElementsByName("includecheck");
     var iskGain = 0;
     var iskLoss = 0;
@@ -224,6 +233,7 @@ function get_forum_post()
     lines.push("\n");
     var deltaColor = iskLoss < iskGain ? "[color=#00FF00]" : "[color=#FF0000]";
 
+    lines.push("    Stats");
     lines.push("ISK Destroyed: [color=#00FF00]" + iskGain.toLocaleString('en-US') +"[/color]");
     lines.push("ISK Lost: [color=#FF0000]" + iskLoss.toLocaleString('en-US') +"[/color]");
     lines.push("ISK Delta: " + deltaColor + (iskGain - iskLoss).toLocaleString('en-US') +"[/color]");
