@@ -157,7 +157,7 @@ function process_kills()
         // cell.children[0].checked = true;
 
         cell = row.insertCell();
-        cell.innerHTML = "<a href=https://zkillboard.com/kill/"+kill.killID+"/>"+kill.killTime+"</a>";
+        cell.innerHTML = "<a href=https://zkillboard.com/kill/"+kill.killID+"/ target=\"_blank\">"+kill.killTime+"</a>";
 
 
         cell = row.insertCell();
