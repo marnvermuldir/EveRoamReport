@@ -293,15 +293,17 @@ function get_forum_post()
     var iskGain = 0;
     var iskLoss = 0;
     var firstKill = true;
+    var addSeparator = true;
     for (var i = 0; i < window.workingKillSet.length; ++i) {
         var kill = window.workingKillSet[i];
+        if (kill.isFightStart) addSeparator = true;
         if (!kill.isIncluded) continue;
 
         var friendlyLine = kill.isFriendly ? "FF0000]-" : "00FF00]+";
         var shipName = window.knownTypes[kill.victim.shipTypeID];
         if (shipName === undefined) shipName = "Unknown Type";
 
-        if (kill.isFightStart || firstKill) {
+        if (addSeparator) {
             var regions = [kill.solarSystemID];
             for (var j = i+1; j < window.workingKillSet.length; ++j) {
                 var kk = window.workingKillSet[j];
@@ -317,6 +319,7 @@ function get_forum_post()
             })
 
             lines.push((firstKill ? "(" : "\n(") + kill.killTime.slice(11) + ") " + regions.join(", "));
+            addSeparator = false;
             firstKill = false;
         }
         lines.push("[url=https://zkillboard.com/kill/"+kill.killID+"/]"+shipName+"[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
