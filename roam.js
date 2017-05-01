@@ -1,8 +1,6 @@
 // TODO:
-//  - Correct list of ships (and updates when CCP releases new ones).
 //  - Input validation.
 //  - Abuse prevention and rate limiting (may require backend/caching).
-//  - Get system/region names.
 //  - Custom output formatting:
 //      - Different forum post templates.
 //      - Custom number formatting for isk values.
@@ -25,6 +23,9 @@
 //      - visual timeline?
 //      - parallel tracks for different systems?
 //  - Detect if browser is supported (obviously, Fetch API is not supported in IE).
+
+window.knownTypes = {}
+window.unknownTypes = []
 
 function numeric_sort(a, b) { return a-b; }
 
@@ -66,7 +67,7 @@ function enter_names()
         var match = undefined;
         if ((match = charNameRegex1.exec(line)) !== null) {
             name = match[2].trim();
-            var date = new Date("" + match[1] + " GMT");
+            var date = new Date(match[1] + " GMT");
             if (window.starttime === undefined) {
                 window.starttime = match[1].replace(/[\. ]/g, "").slice(0, 10);
             }
@@ -128,13 +129,16 @@ function request_kill_batch(characterIDs, start)
             kill.date = new Date(kill.killTime);
             window.killIDs.push(kill.killID);
             window.unsortedKills.push(kill);
+            if (window.unknownTypes.indexOf(kill.victim.shipTypeID) == -1 && !window.knownTypes[kill.victim.shipTypeID]) {
+                window.unknownTypes.push(kill.victim.shipTypeID);
+            }
             killAddCount += 1;
         }
         console.log("Added " + killAddCount + " kills");
         if (start+10 < characterIDs.length) {
             request_kill_batch(characterIDs, start+10);
         } else {
-            process_kills();
+            update_eve_types();
         }
     })
     .catch(function(error) {
@@ -142,6 +146,45 @@ function request_kill_batch(characterIDs, start)
         var loader = document.getElementsByClassName("loader")[0];
         loader.style.display = "none";
     });
+}
+
+function update_eve_types()
+{
+    var types = window.unknownTypes.slice(0,250).join();
+    window.unknownTypes = window.unknownTypes.slice(250);
+    var typesQuery = "https://api.eveonline.com/eve/TypeName.xml.aspx?ids=" + types;
+
+    function next_request() {
+        if (window.unknownTypes.length > 0) {
+            update_eve_types();
+        } else {
+            process_kills();
+        }
+    }
+
+    fetch(new Request(typesQuery, {method: 'GET'}))
+    .then(response => {
+        if (response.status != 200) {
+            next_request();
+            throw new Error("API request failed to get list of character IDs");
+        }
+        return response.text();
+    })
+    .then(xmltext => {
+        // There really is no need to do xml processing...
+        var typeRegex = /typeID="(\d+)"\s*typeName="([^"]+)"/gi;
+        var match;
+        while ((match = typeRegex.exec(xmltext)) !== null) {
+            window.knownTypes[match[1]] = match[2];
+        }
+        next_request();
+    })
+    .catch(function(error) {
+        console.error(error);
+        var loader = document.getElementsByClassName("loader")[0];
+        loader.style.display = "none";
+    });
+
 }
 
 function process_kills()
@@ -188,9 +231,8 @@ function process_kills()
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        var shipID = "" + kill.victim.shipTypeID;
-        var shipName = window.shipNames[shipID];
-        if (shipName === undefined) shipName = "Unknown";
+        var shipName = window.knownTypes[kill.victim.shipTypeID];
+        if (shipName === undefined) shipName = "Unknown Type";
         t = document.createTextNode(shipName);
         cell.appendChild(t);
 
@@ -203,7 +245,9 @@ function process_kills()
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        t = document.createTextNode(kill.solarSystemID);
+        var systemName = window.solarSystems[kill.solarSystemID];
+        if (systemName === undefined) systemName = "sysId_"+kill.solarSystemID;
+        t = document.createTextNode(systemName);
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
@@ -254,11 +298,25 @@ function get_forum_post()
         if (!kill.isIncluded) continue;
 
         var friendlyLine = kill.isFriendly ? "FF0000]-" : "00FF00]+";
-        var shipName = window.shipNames["" + kill.victim.shipTypeID];
-        if (shipName === undefined) shipName = "Unknown";
+        var shipName = window.knownTypes[kill.victim.shipTypeID];
+        if (shipName === undefined) shipName = "Unknown Type";
 
         if (kill.isFightStart || firstKill) {
-            lines.push((firstKill ? "(" : "\n(") + kill.killTime.slice(11) + ")");
+            var regions = [kill.solarSystemID];
+            for (var j = i+1; j < window.workingKillSet.length; ++j) {
+                var kk = window.workingKillSet[j];
+                if (kk.isFightStart) break;
+                if (kk.isIncluded && regions.indexOf(kk.solarSystemID) == -1) {
+                    regions.push(kk.solarSystemID);
+                }
+            }
+            var regions = regions.map(x => {
+                var systemName = window.solarSystems[x];
+                if (systemName === undefined) return "sysId_"+x;
+                return systemName;
+            })
+
+            lines.push((firstKill ? "(" : "\n(") + kill.killTime.slice(11) + ") " + regions.join(", "));
             firstKill = false;
         }
         lines.push("[url=https://zkillboard.com/kill/"+kill.killID+"/]"+shipName+"[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
