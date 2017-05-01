@@ -97,3 +97,10 @@
     }
 }
 
+.credits {
+    text-align: center;
+    display: block;
+    margin: 80px auto 10px auto;
+    font-size: 10pt;
+    color: #999;
+}
