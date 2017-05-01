@@ -21,17 +21,19 @@
         <button class="advance-button" onclick="enter_names()"><i class="fa fa-chevron-down" aria-hidden="true"></i> Process fleet log <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
         <div class="loader" style="display: none;"></div>
 
-        <p>I think this is what happened with your roam, but I'm not sure. Drag over kills to include/exclude them from the AAR. Toggle fight starts to add separators with timestamps before those kills.</p>
+        <div class="step-two" style="display: none;">
+            <p>I think this is what happened with your roam, but I can't be sure. Drag over kills to include/exclude them from the AAR. Toggle fight starts to add separators with timestamps before those kills.</p>
 
-        <div class="adjust-aar">
-            <div class="kill-display" name="killdisplay">
-                <div class="krh"><div class="kh">New fight?</div><div class="kh">Time</div><div class="kh">Kill/Loss</div><div class="kh">Ship</div><div class="kh">Victim</div><div class="kh">Final Blow</div><div class="kh">Location</div><div class="kh">ISK</div></div>
+            <div class="adjust-aar">
+                <div class="kill-display" name="killdisplay">
+                    <div class="krh"><div class="kh">New fight?</div><div class="kh">Time</div><div class="kh">Kill/Loss</div><div class="kh">Ship</div><div class="kh">Victim</div><div class="kh">Final Blow</div><div class="kh">Location</div><div class="kh">ISK</div></div>
+                </div>
             </div>
+
+            <button class="advance-button" onclick="get_forum_post()"><i class="fa fa-chevron-down" aria-hidden="true"></i> Generate AAR template <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
+
+            <textarea class="output-aar" name="output" placeholder="Output..."></textarea>
         </div>
-
-        <button class="advance-button" onclick="get_forum_post()"><i class="fa fa-chevron-down" aria-hidden="true"></i> Generate AAR template <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
-
-        <textarea class="output-aar" name="output" placeholder="Output..."></textarea>
     </div>
 
 </body>

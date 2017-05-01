@@ -259,6 +259,8 @@ function process_kills()
 
     var loader = document.getElementsByClassName("loader")[0];
     loader.style.display = "none";
+    var stepTwo = document.getElementsByClassName("step-two")[0];
+    stepTwo.style.display = "inherit";
 }
 
 function update_kill_display(kill)
