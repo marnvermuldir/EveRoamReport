@@ -43,6 +43,12 @@
     border-collapse: collapse;
 }
 
+.kill-display .krh {
+    background-color: white;
+    display: table-row;
+    padding: 2px 0;
+}
+
 .kill-display .kr-on {
     background-color: white;
     display: table-row;

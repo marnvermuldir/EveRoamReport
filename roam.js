@@ -150,7 +150,7 @@ function process_kills()
 
     window.workingKillSet = window.unsortedKills.sort(kill_sort);
     var table = document.getElementsByName("killdisplay")[0];
-    table.innerHTML = '<div class="kr-on"><div class="kh">New fight?</div><div class="kh">Time</div><div class="kh">Kill/Loss</div><div class="kh">Ship</div><div class="kh">Victim</div><div class="kh">Final Blow</div><div class="kh">Location</div><div class="kh">ISK</div></div>';
+    table.innerHTML = '<div class="krh"><div class="kh">New fight?</div><div class="kh">Time</div><div class="kh">Kill/Loss</div><div class="kh">Ship</div><div class="kh">Victim</div><div class="kh">Final Blow</div><div class="kh">Location</div><div class="kh">ISK</div></div>';
 
     for (var i = 0; i < window.workingKillSet.length; ++i) {
         var kill = window.workingKillSet[i];
