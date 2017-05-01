@@ -1,13 +1,6 @@
 // TODO:
-//  - Proper UI for list of kills.
-//  - Super fast select/deselect kill from final output:
-//      - Click and drag over kills?
-//      - Start/End separators?
-//  - Redo layout
-//      - Working concept: 3 resizable columns; A. Input names & start/end date; B. Filter kills; C. Output).
 //  - Correct list of ships (and updates when CCP releases new ones).
 //  - Input validation.
-//  - Progress/Spinner/Loading UI.
 //  - Abuse prevention and rate limiting (may require backend/caching).
 //  - Get system/region names.
 //  - Custom output formatting:
@@ -265,7 +258,7 @@ function get_forum_post()
         if (shipName === undefined) shipName = "Unknown";
 
         if (kill.isFightStart || firstKill) {
-            lines.push((firstKill ? "\n(" : "(") + kill.killTime.slice(11) + ")");
+            lines.push((firstKill ? "(" : "\n(") + kill.killTime.slice(11) + ")");
             firstKill = false;
         }
         lines.push("[url=https://zkillboard.com/kill/"+kill.killID+"/]"+shipName+"[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
