@@ -3,33 +3,36 @@
 <head>
     <script src="data.js"></script>
     <script src="roam.js"></script>
+    <link rel="stylesheet" href="roam.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
     <title>Roam Report</title>
 </head>
 <body>
 
-    <h1>Roam Report.</h1>
+    <div class="page-container">
+        <h1>Roam Report.</h1>
 
-    <h3>Usage:</h3>
-    <p>Wait a while for kills to get updated on zKillboard after the roam has ended. (30-60 mins? no idea how long it takes)</p>
-    <p>Remember to be considerate and not spam zKill with this tool...</p>
-    <p>And paste the fleet log here:</p>
+        <h3>Usage:</h3>
+        <p>Wait a while for kills to get updated on zKillboard after the roam has ended. (30-60 mins? no idea how long it takes)</p>
+        <p>Remember to be considerate and not spam zKill with this tool...</p>
+        <p>And paste the fleet log here:</p>
 
-    <br>
-    <textarea name="names" rows="6" cols="120">
-    </textarea>
-    <br>
-    <button onclick="enter_names()">Submit</button>
-    <br>
+        <textarea class="input-fleet-text" name="names" placeholder="Paste the chat log of a roam here..."></textarea>
+        <button class="advance-button" onclick="enter_names()"><i class="fa fa-chevron-down" aria-hidden="true"></i> Process fleet log <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
+        <div class="loader" style="display: none;"></div>
 
-    <p>Deselect kills you wish to ignore from the AAR:</p>
+        <p>I think this is what happened with your roam, but I'm not sure. Drag over kills to include/exclude them from the AAR. Toggle fight starts to add separators with timestamps before those kills.</p>
 
-    <table name="killdisplay">
-<tr><th>Include?</th><th>Time</th><th>Kill/Loss</th><th>Ship</th><th>Victim</th><th>Final Blow</th><th>Location</th><th>ISK</th></tr>
-    </table>
+        <div class="adjust-aar">
+            <div class="kill-display" name="killdisplay">
+                <div class="kr-on"><div class="kh">New fight?</div><div class="kh">Time</div><div class="kh">Kill/Loss</div><div class="kh">Ship</div><div class="kh">Victim</div><div class="kh">Final Blow</div><div class="kh">Location</div><div class="kh">ISK</div></div>
+            </div>
+        </div>
 
-    <button onclick="get_forum_post()">Get Forum Template</button>
-    <br>
-    <textarea name="output" rows="6" cols="120" readonly>
-    </textarea>
+        <button class="advance-button" onclick="get_forum_post()"><i class="fa fa-chevron-down" aria-hidden="true"></i> Generate AAR template <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
+
+        <textarea class="output-aar" name="output" placeholder="Output..."></textarea>
+    </div>
+
 </body>
 </html>

@@ -37,15 +37,24 @@ function numeric_sort(a, b) { return a-b; }
 
 function kill_sort(a, b)
 {
-    var d1 = new Date(a.killTime);
-    var d2 = new Date(b.killTime);
-    if (d1 > d2) return 1;
-    if (d1 == d2) return 0;
+    if (a.date > b.date) return 1;
+    if (a.date == b.date) return 0;
     return -1;
+}
+
+function get_kill_by_id(id, killList)
+{
+    for (var i = 0; i < killList.length; ++i) {
+        if (killList[i].killID == id) return killList[i];
+    }
+    return undefined;
 }
 
 function enter_names()
 {
+    var loader = document.getElementsByClassName("loader")[0];
+    loader.style.display = "inherit";
+
     var elem = document.getElementsByName("names")[0];
     var nameList = elem.value.split("\n");
     window.finalNames = [];
@@ -102,6 +111,8 @@ function enter_names()
     })
     .catch(function(error) {
         console.error(error);
+        var loader = document.getElementsByClassName("loader")[0];
+        loader.style.display = "none";
     });
 }
 
@@ -121,6 +132,7 @@ function request_kill_batch(characterIDs, start)
         for (var i = 0; i < kills.length; ++i) {
             var kill = kills[i];
             if (window.killIDs.indexOf(kill.killID) >= 0) continue;
+            kill.date = new Date(kill.killTime);
             window.killIDs.push(kill.killID);
             window.unsortedKills.push(kill);
             killAddCount += 1;
@@ -134,64 +146,105 @@ function request_kill_batch(characterIDs, start)
     })
     .catch(function(error) {
         console.error(error);
+        var loader = document.getElementsByClassName("loader")[0];
+        loader.style.display = "none";
     });
 }
-
 
 function process_kills()
 {
     console.log("Processing kills...");
 
-    window.wokringKills = window.unsortedKills.sort(kill_sort);
+    window.workingKillSet = window.unsortedKills.sort(kill_sort);
     var table = document.getElementsByName("killdisplay")[0];
-    table.innerHTML = "<tr><th>Include?</th><th>Time</th><th>Kill/Loss</th><th>Ship</th><th>Victim</th><th>Final Blow</th><th>Location</th><th>ISK</th></tr>";
-    for (var i = 0; i < window.wokringKills.length; ++i) {
-        var kill = window.wokringKills[i];
+    table.innerHTML = '<div class="kr-on"><div class="kh">New fight?</div><div class="kh">Time</div><div class="kh">Kill/Loss</div><div class="kh">Ship</div><div class="kh">Victim</div><div class="kh">Final Blow</div><div class="kh">Location</div><div class="kh">ISK</div></div>';
+
+    for (var i = 0; i < window.workingKillSet.length; ++i) {
+        var kill = window.workingKillSet[i];
         var isFriendly = window.friendlies.indexOf(kill.victim.characterID) > -1;
+        var row = document.createElement("div"); row.className = "kr-on"; table.appendChild(row);
+        row.name = kill.killID;
+
+        kill.displayRow = row;
         kill.isFriendly = isFriendly;
-        var row = table.insertRow();
-        row.style.color = isFriendly ? "red" : "green";
+        kill.isIncluded = true;
+        kill.isFightStart = (i == 0 || (kill.date - window.workingKillSet[i-1].date) > 5 * 60 * 1000);
 
-        var cell = row.insertCell();
-        cell.innerHTML = '<input type="checkbox" checked id="'+kill.killID+'" name="includecheck" value="'+kill.killID+'">';
-        // cell.children[0].checked = true;
+        var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
+        cell.innerHTML = '<input type="checkbox" checked id="'+kill.killID+'">';
+        kill.isFightStartCheckBox = cell.children[0];
+        kill.isFightStartCheckBox.checked = kill.isFightStart;
+        kill.isFightStartCheckBox.addEventListener('change', function (event) {
+            var kill = get_kill_by_id(parseInt(event.target.id), window.workingKillSet);
+            kill.isFightStart = event.target.checked;
+            update_kill_display(kill);
+        });
 
-        cell = row.insertCell();
+        kill.isFightStartCheckBox.addEventListener('mousedown', function (event) { event.stopPropagation(); });
+        kill.isFightStartCheckBox.addEventListener('touchdown', function (event) { event.stopPropagation(); });
+
+        var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
         cell.innerHTML = "<a href=https://zkillboard.com/kill/"+kill.killID+"/ target=\"_blank\">"+kill.killTime+"</a>";
+        kill.zkillHref = cell.children[0];
 
+        kill.zkillHref.addEventListener('mousedown', function (event) { event.stopPropagation(); });
+        kill.zkillHref.addEventListener('touchdown', function (event) { event.stopPropagation(); });
 
-        cell = row.insertCell();
+        var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
         t = document.createTextNode(isFriendly ? "Loss" : "Kill");
         cell.appendChild(t);
 
-        cell = row.insertCell();
+        var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
         var shipID = "" + kill.victim.shipTypeID;
         var shipName = window.shipNames[shipID];
         if (shipName === undefined) shipName = "Unknown";
         t = document.createTextNode(shipName);
         cell.appendChild(t);
 
-        cell = row.insertCell();
+        var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
         t = document.createTextNode(kill.victim.characterName);
         cell.appendChild(t);
 
-        cell = row.insertCell();
+        var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
         t = document.createTextNode(kill.attackers.filter(x => x.finalBlow == 1)[0].characterName);
         cell.appendChild(t);
 
-        cell = row.insertCell();
+        var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
         t = document.createTextNode(kill.solarSystemID);
         cell.appendChild(t);
 
-        cell = row.insertCell();
+        var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
         t = document.createTextNode((Math.round(kill.zkb.totalValue/10000)/100) + "m");
         cell.appendChild(t);
+
+        update_kill_display(kill);
+    }
+
+    var loader = document.getElementsByClassName("loader")[0];
+    loader.style.display = "none";
+}
+
+function update_kill_display(kill)
+{
+    kill.isFightStartCheckBox.checked = kill.isFightStart;
+    if (kill.isFightStart) {
+        kill.displayRow.style.borderTop = "solid 2px #ccc";
+    } else {
+        kill.displayRow.style.borderTop = "0px";
+    }
+
+
+    if (kill.isIncluded) {
+        kill.displayRow.className = "kr-on";
+        kill.displayRow.style.color = kill.isFriendly ? "red" : "green";
+    } else {
+        kill.displayRow.className = "kr-off";
+        kill.displayRow.style.color = "#aaa";
     }
 }
 
 function get_forum_post()
 {
-
     var lines = []
     lines.push("    Roam members (" + window.finalNames.length + ") - NOTE: This section is NOT usually included in AARs.");
     window.finalNames = window.finalNames.sort();
@@ -200,27 +253,21 @@ function get_forum_post()
     }
     lines.push("\n    Kills and Losses");
 
-    var checkboxes = document.getElementsByName("includecheck");
     var iskGain = 0;
     var iskLoss = 0;
-    for (var i = 0; i < checkboxes.length; ++i) {
-        var box = checkboxes[i];
-        var id = box.value;
-        if (!box.checked) continue;
+    var firstKill = true;
+    for (var i = 0; i < window.workingKillSet.length; ++i) {
+        var kill = window.workingKillSet[i];
+        if (!kill.isIncluded) continue;
 
-        var kill = undefined
-        for (var i = 0; i < window.wokringKills.length; ++i) {
-            if (window.wokringKills[i].killID == id) {
-                kill = window.wokringKills[i];
-                break;
-            }
-        }
-
-        if (kill === undefined) continue;
         var friendlyLine = kill.isFriendly ? "FF0000]-" : "00FF00]+";
         var shipName = window.shipNames["" + kill.victim.shipTypeID];
         if (shipName === undefined) shipName = "Unknown";
 
+        if (kill.isFightStart || firstKill) {
+            lines.push((firstKill ? "\n(" : "(") + kill.killTime.slice(11) + ")");
+            firstKill = false;
+        }
         lines.push("[url=https://zkillboard.com/kill/"+kill.killID+"/]"+shipName+"[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
 
         if (!kill.isFriendly) {
@@ -243,3 +290,52 @@ function get_forum_post()
     elem.value = lines.join("\n");
 }
 
+
+var mouseDown = false;
+var previousRow = undefined;
+var enablingRows = false;
+// function kills_mouse_down('mousedown touchstart',
+function kills_mouse_down(event) {
+    event.preventDefault();
+    var row = event.target;
+    if (row.tagName == "a" || row.tagName == "input") return;
+
+    while(row && row.className != "kr-on" && row.className != "kr-off") row = row.parentElement;
+    if (row) {
+        kill = get_kill_by_id(parseInt(row.name), window.workingKillSet);
+        enablingRows = !kill.isIncluded;
+        mouseDown = true;
+        previousRow = undefined;
+
+        kills_update_include_state(event);
+    }
+}
+
+function kills_update_include_state(event) {
+    // event.preventDefault();
+    if(mouseDown) {
+        var row = event.target;
+        while(row && row.className != "kr-on" && row.className != "kr-off") row = row.parentElement;
+        if (row && row != previousRow) {
+            kill = get_kill_by_id(parseInt(row.name), window.workingKillSet);
+            kill.isIncluded = enablingRows;
+            update_kill_display(kill);
+        }
+    }
+}
+
+function window_mouse_up(event) {
+    mouseDown = false;
+};
+
+window.onload = function()
+{
+    var table = document.getElementsByName("killdisplay")[0];
+    console.log("loaded " + table);
+    table.addEventListener('mousedown', kills_mouse_down);
+    table.addEventListener('touchdown', kills_mouse_down);
+    table.addEventListener('mousemove', kills_update_include_state);
+    table.addEventListener('touchmove', kills_update_include_state);
+    document.addEventListener('mouseup', window_mouse_up);
+    document.addEventListener('touchend', window_mouse_up);
+}
