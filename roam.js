@@ -24,8 +24,10 @@
 //      - parallel tracks for different systems?
 //  - Detect if browser is supported (obviously, Fetch API is not supported in IE).
 
-window.knownTypes = {}
-window.unknownTypes = []
+window.knownTypes = {};
+window.unknownTypes = [];
+window.characters = {}; // This value does not need to be reset.
+window.missingCharacters = []
 
 function numeric_sort(a, b) { return a-b; }
 
@@ -39,7 +41,7 @@ function kill_sort(a, b)
 function get_kill_by_id(id, killList)
 {
     for (var i = 0; i < killList.length; ++i) {
-        if (killList[i].killID == id) return killList[i];
+        if (killList[i].killmail_id == id) return killList[i];
     }
     return undefined;
 }
@@ -93,11 +95,13 @@ function enter_names()
     })
     .then(xmltext => {
         // There really is no need to do xml processing...
-        var charIdRegex = /characterID="(\d+)"/gi;
+        var charIdRegex = /name="([^"]+)"\s+characterID="(\d+)"/gi;
         var match;
         while ((match = charIdRegex.exec(xmltext)) !== null) {
-            var id = parseInt(match[1]);
+            var name = match[1];
+            var id = parseInt(match[2]);
             if (id != 0) window.friendlies.push(id);
+            window.characters[id] = name;
         }
         window.friendlies = window.friendlies.sort(numeric_sort);
         console.log("Got character IDs");
@@ -125,12 +129,12 @@ function request_kill_batch(characterIDs, start)
         var killAddCount = 0;
         for (var i = 0; i < kills.length; ++i) {
             var kill = kills[i];
-            if (window.killIDs.indexOf(kill.killID) >= 0) continue;
-            kill.date = new Date(kill.killTime);
-            window.killIDs.push(kill.killID);
+            if (window.killIDs.indexOf(kill.killmail_id) >= 0) continue;
+            kill.date = new Date(kill.killmail_time);
+            window.killIDs.push(kill.killmail_id);
             window.unsortedKills.push(kill);
-            if (window.unknownTypes.indexOf(kill.victim.shipTypeID) == -1 && !window.knownTypes[kill.victim.shipTypeID]) {
-                window.unknownTypes.push(kill.victim.shipTypeID);
+            if (window.unknownTypes.indexOf(kill.victim.ship_type_id) == -1 && !window.knownTypes[kill.victim.ship_type_id]) {
+                window.unknownTypes.push(kill.victim.ship_type_id);
             }
             killAddCount += 1;
         }
@@ -197,56 +201,56 @@ function process_kills()
 
     for (var i = 0; i < window.workingKillSet.length; ++i) {
         var kill = window.workingKillSet[i];
-        var isFriendly = window.friendlies.indexOf(kill.victim.characterID) > -1;
+        var is_friendly = window.friendlies.indexOf(kill.victim.character_id) > -1;
         var row = document.createElement("div"); row.className = "kr-on"; table.appendChild(row);
-        row.name = kill.killID;
+        row.name = kill.killmail_id;
 
-        kill.displayRow = row;
-        kill.isFriendly = isFriendly;
-        kill.isIncluded = true;
-        kill.isFightStart = (i == 0 || (kill.date - window.workingKillSet[i-1].date) > 5 * 60 * 1000);
+        kill.display_row = row;
+        kill.is_friendly = is_friendly;
+        kill.is_included = true;
+        kill.is_fight_start = (i == 0 || (kill.date - window.workingKillSet[i-1].date) > 5 * 60 * 1000);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        cell.innerHTML = '<input type="checkbox" checked id="'+kill.killID+'">';
-        kill.isFightStartCheckBox = cell.children[0];
-        kill.isFightStartCheckBox.checked = kill.isFightStart;
-        kill.isFightStartCheckBox.addEventListener('change', function (event) {
+        cell.innerHTML = '<input type="checkbox" checked id="'+kill.killmail_id+'">';
+        kill.is_fight_start_check_box = cell.children[0];
+        kill.is_fight_start_check_box.checked = kill.is_fight_start;
+        kill.is_fight_start_check_box.addEventListener('change', function (event) {
             var kill = get_kill_by_id(parseInt(event.target.id), window.workingKillSet);
-            kill.isFightStart = event.target.checked;
+            kill.is_fight_start = event.target.checked;
             update_kill_display(kill);
         });
 
-        kill.isFightStartCheckBox.addEventListener('mousedown', function (event) { event.stopPropagation(); });
-        kill.isFightStartCheckBox.addEventListener('touchdown', function (event) { event.stopPropagation(); });
+        kill.is_fight_start_check_box.addEventListener('mousedown', function (event) { event.stopPropagation(); });
+        kill.is_fight_start_check_box.addEventListener('touchdown', function (event) { event.stopPropagation(); });
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        cell.innerHTML = "<a href=https://zkillboard.com/kill/"+kill.killID+"/ target=\"_blank\">"+kill.killTime+"</a>";
-        kill.zkillHref = cell.children[0];
+        cell.innerHTML = "<a href=https://zkillboard.com/kill/"+kill.killmail_id+"/ target=\"_blank\">"+kill.killmail_time+"</a>";
+        kill.zkill_href = cell.children[0];
 
-        kill.zkillHref.addEventListener('mousedown', function (event) { event.stopPropagation(); });
-        kill.zkillHref.addEventListener('touchdown', function (event) { event.stopPropagation(); });
+        kill.zkill_href.addEventListener('mousedown', function (event) { event.stopPropagation(); });
+        kill.zkill_href.addEventListener('touchdown', function (event) { event.stopPropagation(); });
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        t = document.createTextNode(isFriendly ? "Loss" : "Kill");
+        t = document.createTextNode(is_friendly ? "Loss" : "Kill");
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        var shipName = window.knownTypes[kill.victim.shipTypeID];
+        var shipName = window.knownTypes[kill.victim.ship_type_id];
         if (shipName === undefined) shipName = "Unknown Type";
         t = document.createTextNode(shipName);
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        t = document.createTextNode(kill.victim.characterName);
+        t = document.createTextNode(window.characters[kill.victim.character_id]);
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        t = document.createTextNode(kill.attackers.filter(x => x.finalBlow == 1)[0].characterName);
+        t = document.createTextNode(window.characters[kill.attackers.filter(x => x.final_blow == 1)[0].character_id]);
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        var systemName = window.solarSystems[kill.solarSystemID];
-        if (systemName === undefined) systemName = "sysId_"+kill.solarSystemID;
+        var systemName = window.solarSystems[kill.solar_system_id];
+        if (systemName === undefined) systemName = "sysId_"+kill.solar_system_id;
         t = document.createTextNode(systemName);
         cell.appendChild(t);
 
@@ -265,20 +269,20 @@ function process_kills()
 
 function update_kill_display(kill)
 {
-    kill.isFightStartCheckBox.checked = kill.isFightStart;
-    if (kill.isFightStart) {
-        kill.displayRow.style.borderTop = "solid 2px #ccc";
+    kill.is_fight_start_check_box.checked = kill.is_fight_start;
+    if (kill.is_fight_start) {
+        kill.display_row.style.borderTop = "solid 2px #ccc";
     } else {
-        kill.displayRow.style.borderTop = "0px";
+        kill.display_row.style.borderTop = "0px";
     }
 
 
-    if (kill.isIncluded) {
-        kill.displayRow.className = "kr-on";
-        kill.displayRow.style.color = kill.isFriendly ? "red" : "green";
+    if (kill.is_included) {
+        kill.display_row.className = "kr-on";
+        kill.display_row.style.color = kill.is_friendly ? "red" : "green";
     } else {
-        kill.displayRow.className = "kr-off";
-        kill.displayRow.style.color = "#aaa";
+        kill.display_row.className = "kr-off";
+        kill.display_row.style.color = "#aaa";
     }
 }
 
@@ -298,20 +302,20 @@ function get_forum_post()
     var addSeparator = true;
     for (var i = 0; i < window.workingKillSet.length; ++i) {
         var kill = window.workingKillSet[i];
-        if (kill.isFightStart) addSeparator = true;
-        if (!kill.isIncluded) continue;
+        if (kill.is_fight_start) addSeparator = true;
+        if (!kill.is_included) continue;
 
-        var friendlyLine = kill.isFriendly ? "FF0000]-" : "00FF00]+";
-        var shipName = window.knownTypes[kill.victim.shipTypeID];
+        var friendlyLine = kill.is_friendly ? "FF0000]-" : "00FF00]+";
+        var shipName = window.knownTypes[kill.victim.ship_type_id];
         if (shipName === undefined) shipName = "Unknown Type";
 
         if (addSeparator) {
-            var regions = [kill.solarSystemID];
+            var regions = [kill.solar_system_id];
             for (var j = i+1; j < window.workingKillSet.length; ++j) {
                 var kk = window.workingKillSet[j];
-                if (kk.isFightStart) break;
-                if (kk.isIncluded && regions.indexOf(kk.solarSystemID) == -1) {
-                    regions.push(kk.solarSystemID);
+                if (kk.is_fight_start) break;
+                if (kk.is_included && regions.indexOf(kk.solar_system_id) == -1) {
+                    regions.push(kk.solar_system_id);
                 }
             }
             var regions = regions.map(x => {
@@ -320,13 +324,13 @@ function get_forum_post()
                 return systemName;
             })
 
-            lines.push((firstKill ? "(" : "\n(") + kill.killTime.slice(11) + ") " + regions.join(", "));
+            lines.push((firstKill ? "(" : "\n(") + kill.killmail_time.slice(11) + ") " + regions.join(", "));
             addSeparator = false;
             firstKill = false;
         }
-        lines.push("[url=https://zkillboard.com/kill/"+kill.killID+"/]"+shipName+"[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
+        lines.push("[url=https://zkillboard.com/kill/"+kill.killmail_id+"/]"+shipName+"[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
 
-        if (!kill.isFriendly) {
+        if (!kill.is_friendly) {
             iskGain += kill.zkb.totalValue;
         } else {
             iskLoss += kill.zkb.totalValue;
@@ -359,7 +363,7 @@ function kills_mouse_down(event) {
     while(row && row.className != "kr-on" && row.className != "kr-off") row = row.parentElement;
     if (row) {
         kill = get_kill_by_id(parseInt(row.name), window.workingKillSet);
-        enablingRows = !kill.isIncluded;
+        enablingRows = !kill.is_included;
         mouseDown = true;
         previousRow = undefined;
 
@@ -374,7 +378,7 @@ function kills_update_include_state(event) {
         while(row && row.className != "kr-on" && row.className != "kr-off") row = row.parentElement;
         if (row && row != previousRow) {
             kill = get_kill_by_id(parseInt(row.name), window.workingKillSet);
-            kill.isIncluded = enablingRows;
+            kill.is_included = enablingRows;
             update_kill_display(kill);
         }
     }
