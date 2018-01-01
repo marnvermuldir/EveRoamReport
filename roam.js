@@ -4,8 +4,6 @@
 //  - Custom output formatting:
 //      - Different forum post templates.
 //      - Custom number formatting for isk values.
-//      - Allow killfeed.eveuni (not sure if worth, kill ids don't match between zkill and killfeed)
-//  - Discuss with Zarquu: Integration with the new SRP system.
 //  - Other roam metrics>
 //      - Damage?
 //      - Member participation on kills?
@@ -22,6 +20,7 @@
 //  - Additional visualisations?
 //      - visual timeline?
 //      - parallel tracks for different systems?
+//      - show deaths on grid
 //  - Detect if browser is supported (obviously, Fetch API is not supported in IE).
 
 window.knownTypes = {};
@@ -46,7 +45,7 @@ function get_kill_by_id(id, killList)
     return undefined;
 }
 
-function enter_names()
+function get_roam()
 {
     var loader = document.getElementsByClassName("loader")[0];
     loader.style.display = "inherit";
@@ -87,40 +86,98 @@ function enter_names()
 
     console.log("Players involved:" + window.finalNames);
 
-    var nameQuery = "https://api.eveonline.com/eve/CharacterID.xml.aspx?names=" + window.finalNames.map(x => escape(x)).join();
-    fetch(new Request(nameQuery, {method: 'GET'}))
-    .then(response => {
-        if (response.status != 200) throw new Error("API request failed to get list of character IDs");
-        return response.text();
+    request_ids_for_names(window.finalNames, true)
+    .then(() => {
+        return request_all_kills(window.friendlies);
     })
-    .then(xmltext => {
-        // There really is no need to do xml processing...
-        var charIdRegex = /name="([^"]+)"\s+characterID="(\d+)"/gi;
-        var match;
-        while ((match = charIdRegex.exec(xmltext)) !== null) {
-            var name = match[1];
-            var id = parseInt(match[2]);
-            if (id != 0) window.friendlies.push(id);
-            window.characters[id] = name;
-        }
-        window.friendlies = window.friendlies.sort(numeric_sort);
-        console.log("Got character IDs");
-        request_kill_batch(window.friendlies, 0);
+    .then((args) => {
+        return request_names_for_ids(window.unknownTypes);
     })
-    .catch(function(error) {
+    .then((args) => {
+        process_kills();
+    })
+    .catch(error => {
         console.error(error);
         var loader = document.getElementsByClassName("loader")[0];
         loader.style.display = "none";
     });
 }
 
-function request_kill_batch(characterIDs, start)
+function request_ids_for_names(names, addToFriendlies)
 {
-    console.log("Requesting kills for chars: " + start);
+    var nameQuery = "https://esi.tech.ccp.is/latest/universe/ids/?datasource=tranquility&language=en-us";
 
-    var group = characterIDs.slice(start, start+10);
-    var killQuery = "https://zkillboard.com/api/characterID/" + group.join() + "/startTime/"+window.starttime+"00/endTime/"+window.endtime+"00/no-items/";
-    fetch(new Request(killQuery, {method: 'GET', mode: 'cors'}))
+    return fetch(new Request(nameQuery, {method: 'POST', body: JSON.stringify(names)}))
+    .then(response => {
+        if (response.status != 200) throw new Error("API request failed to get list of character IDs");
+        return response.json();
+    })
+    .then(jsonData => {
+        if (jsonData.characters === undefined) throw new Error("Names provided do not correspond to any characters")
+
+        var chars = jsonData.characters;
+        for (var i = 0; i < chars.length; ++i) {
+            window.characters[chars[i].id] = chars[i].name;
+            if (addToFriendlies) window.friendlies.push(chars[i].id);
+        }
+
+        window.friendlies = window.friendlies.sort(numeric_sort);
+        console.log("Got batch of character IDs");
+    })
+}
+
+function request_names_for_ids(IDs)
+{
+    esiIdCountLimit = 1000;
+
+    IDs = Array.from(new Set(IDs));
+    var count = IDs.length;
+    var requests = [];
+    for (var start = 0; start < count; start = start + esiIdCountLimit) {
+        var batch = IDs.slice(start, start + esiIdCountLimit);
+        requests.push(request_names_for_ids_batch(batch));
+    }
+    return Promise.all(requests);
+}
+
+function request_names_for_ids_batch(IDs)
+{
+    var idsQuery = "https://esi.tech.ccp.is/latest/universe/names/?datasource=tranquility";
+
+    return fetch(new Request(idsQuery, {method: 'POST', body: JSON.stringify(IDs)}))
+    .then(response => {
+        if (response.status != 200) throw new Error("API request failed to get list of character IDs");
+        console.log("Got batch of missing names");
+        return response.json();
+    })
+    .then(jsonData => {
+        for (var i = 0; i < jsonData.length; ++i) {
+            if (jsonData[i].category == "character") {
+                window.characters[jsonData[i].id] = jsonData[i].name;
+            } else {
+                window.knownTypes[jsonData[i].id] = jsonData[i].name;
+            }
+        }
+    })
+}
+
+function request_all_kills(characterIDs)
+{
+    zkillCharacterLimit = 10;
+
+    var count = characterIDs.length;
+    var requests = [];
+    for (var start = 0; start < count; start = start + zkillCharacterLimit) {
+        var batch = characterIDs.slice(start, start + zkillCharacterLimit);
+        requests.push(request_kill_batch(batch));
+    }
+    return Promise.all(requests);
+}
+
+function request_kill_batch(batch)
+{
+    var killQuery = "https://zkillboard.com/api/characterID/" + batch.join() + "/startTime/"+window.starttime+"00/endTime/"+window.endtime+"00/no-items/";
+    return fetch(new Request(killQuery, {method: 'GET', mode: 'cors'}))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
         return response.json();
@@ -136,59 +193,13 @@ function request_kill_batch(characterIDs, start)
             if (window.unknownTypes.indexOf(kill.victim.ship_type_id) == -1 && !window.knownTypes[kill.victim.ship_type_id]) {
                 window.unknownTypes.push(kill.victim.ship_type_id);
             }
+            if (window.characters[kill.victim.character_id] === undefined) {
+                window.unknownTypes.push(kill.victim.character_id);
+            }
             killAddCount += 1;
         }
         console.log("Added " + killAddCount + " kills");
-        if (start+10 < characterIDs.length) {
-            request_kill_batch(characterIDs, start+10);
-        } else {
-            update_eve_types();
-        }
     })
-    .catch(function(error) {
-        console.error(error);
-        var loader = document.getElementsByClassName("loader")[0];
-        loader.style.display = "none";
-    });
-}
-
-function update_eve_types()
-{
-    var types = window.unknownTypes.slice(0,250).join();
-    window.unknownTypes = window.unknownTypes.slice(250);
-    var typesQuery = "https://api.eveonline.com/eve/TypeName.xml.aspx?ids=" + types;
-
-    function next_request() {
-        if (window.unknownTypes.length > 0) {
-            update_eve_types();
-        } else {
-            process_kills();
-        }
-    }
-
-    fetch(new Request(typesQuery, {method: 'GET'}))
-    .then(response => {
-        if (response.status != 200) {
-            next_request();
-            throw new Error("API request failed to get list of character IDs");
-        }
-        return response.text();
-    })
-    .then(xmltext => {
-        // There really is no need to do xml processing...
-        var typeRegex = /typeID="(\d+)"\s*typeName="([^"]+)"/gi;
-        var match;
-        while ((match = typeRegex.exec(xmltext)) !== null) {
-            window.knownTypes[match[1]] = match[2];
-        }
-        next_request();
-    })
-    .catch(function(error) {
-        console.error(error);
-        var loader = document.getElementsByClassName("loader")[0];
-        loader.style.display = "none";
-    });
-
 }
 
 function process_kills()
@@ -324,7 +335,7 @@ function get_forum_post()
                 return systemName;
             })
 
-            lines.push((firstKill ? "(" : "\n(") + kill.killmail_time.slice(11) + ") " + regions.join(", "));
+            lines.push((firstKill ? "(" : "\n(") + kill.killmail_time.slice(11, 19) + ") " + regions.join(", "));
             addSeparator = false;
             firstKill = false;
         }
@@ -341,9 +352,9 @@ function get_forum_post()
     var deltaColor = iskLoss < iskGain ? "[color=#00FF00]" : "[color=#FF0000]";
 
     lines.push("    Stats");
-    lines.push("ISK Destroyed: [color=#00FF00]" + iskGain.toLocaleString('en-US') +"[/color]");
+    lines.push("ISK Destroyed: [color=#00FF00]" + iskGain.toLocaleString('en-US') + "[/color]");
     lines.push("ISK Lost: [color=#FF0000]" + iskLoss.toLocaleString('en-US') +"[/color]");
-    lines.push("ISK Delta: " + deltaColor + (iskGain - iskLoss).toLocaleString('en-US') +"[/color]");
+    lines.push("ISK Delta: " + deltaColor + (iskGain - iskLoss).toLocaleString('en-US') + "[/color]");
     lines.push("Efficiency: " + deltaColor + ((iskGain*100) / (iskGain + iskLoss)).toLocaleString('en-US') +"%[/color]");
 
     var elem = document.getElementsByName("output")[0];
