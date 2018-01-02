@@ -105,6 +105,20 @@ function get_roam()
 
 function request_ids_for_names(names, addToFriendlies)
 {
+    esiIdCountLimit = 1000;
+
+    names = Array.from(new Set(names));
+    var count = names.length;
+    var requests = [];
+    for (var start = 0; start < count; start = start + esiIdCountLimit) {
+        var batch = names.slice(start, start + esiIdCountLimit);
+        requests.push(request_ids_for_names_batch(batch, addToFriendlies));
+    }
+    return Promise.all(requests);
+}
+
+function request_ids_for_names_batch(names, addToFriendlies)
+{
     var nameQuery = "https://esi.tech.ccp.is/latest/universe/ids/?datasource=tranquility&language=en-us";
 
     return fetch(new Request(nameQuery, {method: 'POST', body: JSON.stringify(names)}))
@@ -113,7 +127,7 @@ function request_ids_for_names(names, addToFriendlies)
         return response.json();
     })
     .then(jsonData => {
-        if (jsonData.characters === undefined) throw new Error("Names provided do not correspond to any characters")
+        if (jsonData.characters === undefined) jsonData.characters = [];
 
         var chars = jsonData.characters;
         for (var i = 0; i < chars.length; ++i) {
