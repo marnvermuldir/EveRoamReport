@@ -210,6 +210,14 @@ function request_kill_batch(batch)
             if (window.characters[kill.victim.character_id] === undefined) {
                 window.unknownTypes.push(kill.victim.character_id);
             }
+            for (var j = 0; j < kill.attackers.length; ++j) {
+                if (kill.attackers[j].final_blow
+                    && kill.attackers[j].character_id !== undefined
+                    && window.characters[kill.attackers[j].character_id] === undefined)
+                {
+                    window.unknownTypes.push(kill.attackers[j].character_id);
+                }
+            }
             killAddCount += 1;
         }
         console.log("Added " + killAddCount + " kills");
