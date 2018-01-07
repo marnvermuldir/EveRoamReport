@@ -207,7 +207,9 @@ function request_kill_batch(batch)
             if (window.unknownTypes.indexOf(kill.victim.ship_type_id) == -1 && !window.knownTypes[kill.victim.ship_type_id]) {
                 window.unknownTypes.push(kill.victim.ship_type_id);
             }
-            if (window.characters[kill.victim.character_id] === undefined) {
+            if (kill.victim.character_id !== undefined &&
+                window.characters[kill.victim.character_id] === undefined)
+            {
                 window.unknownTypes.push(kill.victim.character_id);
             }
             for (var j = 0; j < kill.attackers.length; ++j) {
