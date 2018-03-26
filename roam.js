@@ -24,9 +24,7 @@
 //  - Detect if browser is supported (obviously, Fetch API is not supported in IE).
 
 window.knownTypes = {};
-window.unknownTypes = [];
-window.characters = {}; // This value does not need to be reset.
-window.missingCharacters = []
+// window.characters[id]: {name:string, isFriendly:bool, shipsFlown:[id]}
 
 function numeric_sort(a, b) { return a-b; }
 
@@ -37,12 +35,30 @@ function kill_sort(a, b)
     return -1;
 }
 
+function char_alpha_sort(a, b)
+{
+    return (a.name < b.name ? -1 :
+            (a.name > b.name ? 1 : 0));
+}
+
 function get_kill_by_id(id, killList)
 {
     for (var i = 0; i < killList.length; ++i) {
         if (killList[i].killmail_id == id) return killList[i];
     }
     return undefined;
+}
+
+function mark_missing_type(id, isCharacter)
+{
+    if (id === undefined) return;
+
+    if (!isCharacter && !window.knownTypes[id] && window.unknownTypes.indexOf(id) == -1) {
+        window.unknownTypes.push(id);
+    }
+    else if (isCharacter && window.characters[id] === undefined) {
+        window.unknownTypes.push(id);
+    }
 }
 
 function get_roam()
@@ -56,6 +72,8 @@ function get_roam()
     window.killIDs = [];
     window.unsortedKills = [];
     window.friendlies = [];
+    window.characters = {};
+    window.unknownTypes = [];
     var charNameRegex1 = /\[ ([\d\. :]+) \] ([ a-zA-Z0-9-']{3,37}) > /;
     var charNameRegex2 = /^\s*([ a-zA-Z0-9-']{3,37})\s*$/
 
@@ -131,7 +149,11 @@ function request_ids_for_names_batch(names, addToFriendlies)
 
         var chars = jsonData.characters;
         for (var i = 0; i < chars.length; ++i) {
-            window.characters[chars[i].id] = chars[i].name;
+            window.characters[chars[i].id] = {
+                name: chars[i].name,
+                isFriendly: addToFriendlies,
+                shipsFlown:[]
+            };
             if (addToFriendlies) window.friendlies.push(chars[i].id);
         }
 
@@ -167,7 +189,11 @@ function request_names_for_ids_batch(IDs)
     .then(jsonData => {
         for (var i = 0; i < jsonData.length; ++i) {
             if (jsonData[i].category == "character") {
-                window.characters[jsonData[i].id] = jsonData[i].name;
+                window.characters[jsonData[i].id] =  {
+                    name: jsonData[i].name,
+                    isFriendly: false,
+                    shipsFlown: []
+                };
             } else {
                 window.knownTypes[jsonData[i].id] = jsonData[i].name;
             }
@@ -204,21 +230,25 @@ function request_kill_batch(batch)
             kill.date = new Date(kill.killmail_time);
             window.killIDs.push(kill.killmail_id);
             window.unsortedKills.push(kill);
-            if (window.unknownTypes.indexOf(kill.victim.ship_type_id) == -1 && !window.knownTypes[kill.victim.ship_type_id]) {
-                window.unknownTypes.push(kill.victim.ship_type_id);
-            }
-            if (kill.victim.character_id !== undefined &&
-                window.characters[kill.victim.character_id] === undefined)
-            {
-                window.unknownTypes.push(kill.victim.character_id);
-            }
+            var v = kill.victim;
+
+            mark_missing_type(v.ship_type_id, false);
+            mark_missing_type(v.character_id, true);
+
             for (var j = 0; j < kill.attackers.length; ++j) {
-                if (kill.attackers[j].final_blow
-                    && kill.attackers[j].character_id !== undefined
-                    && window.characters[kill.attackers[j].character_id] === undefined)
-                {
-                    window.unknownTypes.push(kill.attackers[j].character_id);
+                var attacker = kill.attackers[j];
+
+                if (attacker.final_blow) {
+                    mark_missing_type(attacker.character_id, true);
                 }
+
+                if (attacker.character_id !== undefined
+                    && window.characters[attacker.character_id] !== undefined
+                    && !window.characters[attacker.character_id].shipsFlown.includes(attacker.ship_type_id))
+                {
+                    window.characters[attacker.character_id].shipsFlown.push(attacker.ship_type_id)
+                }
+
             }
             killAddCount += 1;
         }
@@ -276,11 +306,13 @@ function process_kills()
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        t = document.createTextNode(window.characters[kill.victim.character_id]);
+        t = document.createTextNode(window.characters[kill.victim.character_id].name);
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        t = document.createTextNode(window.characters[kill.attackers.filter(x => x.final_blow == 1)[0].character_id]);
+        var char = window.characters[kill.attackers.filter(x => x.final_blow == 1)[0].character_id];
+        if (char) char = char.name;
+        t = document.createTextNode(char);
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
@@ -323,12 +355,54 @@ function update_kill_display(kill)
 
 function get_forum_post()
 {
-    var lines = []
-    lines.push("    Roam members (" + window.finalNames.length + ") - NOTE: This section is NOT usually included in AARs.");
-    window.finalNames = window.finalNames.sort();
-    for (var i = 0; i < window.finalNames.length; ++i) {
-        lines.push(window.finalNames[i]);
+    var sortedCharacters = Object.values(window.characters).filter(x => x.isFriendly == 1).sort(char_alpha_sort);
+    for (var i = 0; i < sortedCharacters.length; ++i) {
+        sortedCharacters[i].shipsFlown = [];
     }
+
+    for (var i = 0; i < window.workingKillSet.length; ++i) {
+        var kill = window.workingKillSet[i];
+        if (!kill.is_included) continue;
+
+        var v = kill.victim;
+        if (v.character_id !== undefined
+            && window.characters[v.character_id] !== undefined
+            && !window.characters[v.character_id].shipsFlown.includes(v.ship_type_id))
+        {
+            window.characters[v.character_id].shipsFlown.push(v.ship_type_id)
+        }
+
+        for (var j = 0; j < kill.attackers.length; ++j) {
+            var attacker = kill.attackers[j];
+            if (attacker.character_id !== undefined
+                && window.characters[attacker.character_id] !== undefined
+                && !window.characters[attacker.character_id].shipsFlown.includes(attacker.ship_type_id))
+            {
+                window.characters[attacker.character_id].shipsFlown.push(attacker.ship_type_id)
+            }
+        }
+    }
+
+    var lines = []
+    lines.push("    Roam members (" + window.finalNames.length + ")");
+    lines.push("[spoiler]");
+    for (var i = 0; i < sortedCharacters.length; ++i) {
+        var char = sortedCharacters[i];
+        var line = char.name;
+        var shipList = ""
+        if (char.shipsFlown.length > 0) {
+            for (var j = 0; j < char.shipsFlown.length; ++j) {
+                var shipName = window.knownTypes[char.shipsFlown[j]];
+                if (shipName === undefined || shipName.includes("Capsule")) continue;
+                if (shipList != "") shipList += ", ";
+                shipList += shipName;
+            }
+        }
+        if (shipList != "") line += " - " + shipList;
+        lines.push(line);
+    }
+    lines.push("[/spoiler]");
+
     lines.push("\n    Kills and Losses");
 
     var iskGain = 0;
