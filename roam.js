@@ -242,13 +242,7 @@ function request_kill_batch(batch)
                     mark_missing_type(attacker.character_id, true);
                 }
 
-                if (attacker.character_id !== undefined
-                    && window.characters[attacker.character_id] !== undefined
-                    && !window.characters[attacker.character_id].shipsFlown.includes(attacker.ship_type_id))
-                {
-                    window.characters[attacker.character_id].shipsFlown.push(attacker.ship_type_id)
-                }
-
+                mark_missing_type(attacker.ship_type_id, false);
             }
             killAddCount += 1;
         }
@@ -355,9 +349,8 @@ function update_kill_display(kill)
 
 function get_forum_post()
 {
-    var sortedCharacters = Object.values(window.characters).filter(x => x.isFriendly == 1).sort(char_alpha_sort);
-    for (var i = 0; i < sortedCharacters.length; ++i) {
-        sortedCharacters[i].shipsFlown = [];
+    for (var key in window.characters) {
+        window.characters[key].shipsFlown = [];
     }
 
     for (var i = 0; i < window.workingKillSet.length; ++i) {
@@ -382,6 +375,8 @@ function get_forum_post()
             }
         }
     }
+
+    var sortedCharacters = Object.values(window.characters).filter(x => x.isFriendly == 1).sort(char_alpha_sort);
 
     var lines = []
     lines.push("    Roam members (" + window.finalNames.length + ")");
