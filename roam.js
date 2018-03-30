@@ -300,7 +300,8 @@ function process_kills()
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
-        t = document.createTextNode(window.characters[kill.victim.character_id].name);
+        var pilotName = kill.victim.character_id ? window.characters[kill.victim.character_id].name : "";
+        t = document.createTextNode(pilotName);
         cell.appendChild(t);
 
         var cell = document.createElement("div"); cell.className = "kd"; row.appendChild(cell);
