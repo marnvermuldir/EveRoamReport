@@ -379,31 +379,30 @@ function get_forum_post()
 
     var sortedCharacters = Object.values(window.characters).filter(x => x.isFriendly == 1).sort(char_alpha_sort);
 
+    var templateName = document.getElementsByName("template")[0].value;
+    var template = window.templates[templateName];
+
     var lines = []
-    lines.push("    Roam members (" + window.finalNames.length + ")");
-    lines.push("[spoiler]");
+    lines.push(template.header())
+    lines.push(template.membersHeader(window.finalNames.length))
     for (var i = 0; i < sortedCharacters.length; ++i) {
         var char = sortedCharacters[i];
-        var line = char.name;
-        var shipList = ""
+        var shipList = []
         if (char.shipsFlown.length > 0) {
             for (var j = 0; j < char.shipsFlown.length; ++j) {
                 var shipName = window.knownTypes[char.shipsFlown[j]];
                 if (shipName === undefined || shipName.includes("Capsule")) continue;
-                if (shipList != "") shipList += ", ";
-                shipList += shipName;
+                shipList.push(shipName);
             }
         }
-        if (shipList != "") line += " - " + shipList;
-        lines.push(line);
+        lines.push(template.member(char.name, shipList));
     }
-    lines.push("[/spoiler]");
+    lines.push(template.membersFooter());
 
-    lines.push("\n    Kills and Losses");
+    lines.push(template.killsHeader());
 
     var iskGain = 0;
     var iskLoss = 0;
-    var firstKill = true;
     var addSeparator = true;
     for (var i = 0; i < window.workingKillSet.length; ++i) {
         var kill = window.workingKillSet[i];
@@ -429,27 +428,31 @@ function get_forum_post()
                 return systemName;
             })
 
-            lines.push((firstKill ? "(" : "\n(") + kill.killmail_time.slice(11, 19) + ") " + regions.join(", "));
-            addSeparator = false;
-            firstKill = false;
-        }
-        lines.push("[url=https://zkillboard.com/kill/"+kill.killmail_id+"/]"+shipName+"[/url] [color=#" + friendlyLine + (Math.round(kill.zkb.totalValue/10000)/100)+ "m[/color]");
+            var time = kill.killmail_time.slice(11, 19);
+            lines.push(template.killListSeparator(time, regions));
 
-        if (!kill.is_friendly) {
-            iskGain += kill.zkb.totalValue;
-        } else {
+            addSeparator = false;
+        }
+
+        var zkillUrl = `https://zkillboard.com/kill/${kill.killmail_id}/`;
+        var zkillValue = (Math.round(kill.zkb.totalValue/10000)/100);
+        if (kill.is_friendly) {
+            lines.push(template.loss(zkillUrl, shipName, zkillValue))
             iskLoss += kill.zkb.totalValue;
+        }
+        else {
+            lines.push(template.kill(zkillUrl, shipName, zkillValue))
+            iskGain += kill.zkb.totalValue;
         }
     }
 
-    lines.push("\n");
-    var deltaColor = iskLoss < iskGain ? "[color=#00FF00]" : "[color=#FF0000]";
+    lines.push(template.killsFooter());
 
-    lines.push("    Stats");
-    lines.push("ISK Destroyed: [color=#00FF00]" + iskGain.toLocaleString('en-US') + "[/color]");
-    lines.push("ISK Lost: [color=#FF0000]" + iskLoss.toLocaleString('en-US') +"[/color]");
-    lines.push("ISK Delta: " + deltaColor + (iskGain - iskLoss).toLocaleString('en-US') + "[/color]");
-    lines.push("Efficiency: " + deltaColor + ((iskGain*100) / (iskGain + iskLoss)).toLocaleString('en-US') +"%[/color]");
+    lines.push(template.statsHeader());
+    lines.push(template.stats(iskGain, iskLoss));
+    lines.push(template.statsFooter());
+
+    lines.push(template.footer());
 
     var elem = document.getElementsByName("output")[0];
     elem.value = lines.join("\n");

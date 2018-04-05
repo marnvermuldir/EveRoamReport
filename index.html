@@ -2,6 +2,7 @@
 <html>
 <head>
     <script src="data.js"></script>
+    <script src="templates.js"></script>
     <script src="roam.js"></script>
     <link rel="stylesheet" href="roam.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
@@ -30,6 +31,13 @@
                     <div class="krh"><div class="kh">New fight?</div><div class="kh">Time</div><div class="kh">Kill/Loss</div><div class="kh">Ship (points)</div><div class="kh">Victim</div><div class="kh">Final Blow</div><div class="kh">Location</div><div class="kh">ISK</div></div>
                 </div>
             </div>
+
+            <center>
+            <label class="template-label"> AAR Template: </label> <select name="template" class="template-select">
+                <option value="simple">Simple</option>
+                <option value="eUni">Eve Uni Forums (ORCON)</option>
+            </select>
+            </center>
 
             <button class="advance-button" onclick="get_forum_post()"><i class="fa fa-chevron-down" aria-hidden="true"></i> Generate AAR template <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
 
