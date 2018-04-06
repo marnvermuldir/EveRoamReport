@@ -79,19 +79,21 @@ function get_roam()
 
     window.starttime = undefined;
     window.endtime = undefined;
+    var startDate = undefined;
+    var endDate = undefined;
 
     for(var i = 0; i < nameList.length; ++i) {
         var line = nameList[i].trim();
         var name = undefined;
         var match = undefined;
+
         if ((match = charNameRegex1.exec(line)) !== null) {
             name = match[2].trim();
             var date = new Date(match[1] + " GMT");
-            if (window.starttime === undefined) {
-                window.starttime = match[1].replace(/[\. ]/g, "").slice(0, 10);
-            }
-            date.setHours(date.getHours() + 1);
-            window.endtime = date.toISOString().replace(/[-T]/g, "").slice(0,10);
+            if (startDate === undefined || date < startDate)
+                startDate = date;
+            if (endDate === undefined || date > endDate)
+                endDate = date;
         } else if ((match = charNameRegex2.exec(line)) !== null) {
             name = match[1].trim();
         }
@@ -101,6 +103,23 @@ function get_roam()
             window.finalNames.push(name);
         }
     }
+
+    var now = new Date(Date.now());
+    var threshold = new Date(now.getTime() - 30*60000);
+    var diff = endDate - threshold;
+    if (endDate > threshold) {
+        var result = window.confirm(`WARNING! It takes about 30 minutes to ensure zkill gets all the kills. We recommend you wait another ${Math.ceil(diff / 60000)} minutes before using this tool.\n\nAre you sure you wish to continue?`)
+
+        if (!result) {
+            var loader = document.getElementsByClassName("loader")[0];
+            loader.style.display = "none";
+            return;
+        }
+    }
+
+    endDate.setHours(endDate.getHours() + 1);
+    window.starttime = startDate.toISOString().replace(/[-T]/g, "").slice(0,10);
+    window.endtime = endDate.toISOString().replace(/[-T]/g, "").slice(0,10);
 
     console.log("Players involved:" + window.finalNames);
 
