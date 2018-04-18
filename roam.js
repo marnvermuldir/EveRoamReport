@@ -156,9 +156,16 @@ function request_ids_for_names(names, addToFriendlies)
 
 function request_ids_for_names_batch(names, addToFriendlies)
 {
-    var nameQuery = "https://esi.tech.ccp.is/latest/universe/ids/?datasource=tranquility&language=en-us";
+    var nameQuery = "https://esi.tech.ccp.is/v1/universe/ids/?datasource=tranquility&language=en-us";
 
-    return fetch(new Request(nameQuery, {method: 'POST', body: JSON.stringify(names)}))
+    return fetch(new Request(nameQuery, {
+        method: 'POST',
+        body: JSON.stringify(names),
+        headers: {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    }))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
         return response.json();
@@ -199,7 +206,14 @@ function request_names_for_ids_batch(IDs)
 {
     var idsQuery = "https://esi.tech.ccp.is/latest/universe/names/?datasource=tranquility";
 
-    return fetch(new Request(idsQuery, {method: 'POST', body: JSON.stringify(IDs)}))
+    return fetch(new Request(idsQuery, {
+        method: 'POST',
+        body: JSON.stringify(IDs),
+        headers: {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    }))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
         console.log("Got batch of missing names");
