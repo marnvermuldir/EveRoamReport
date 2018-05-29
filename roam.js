@@ -117,10 +117,10 @@ function get_roam()
     }
 
     var now = get_date(Date.now());
-    var threshold = get_date(now.getTime() - 30*60000);
+    var threshold = new Date(now.getTime() - 60*60000);
     var diff = endDate - threshold;
     if (endDate > threshold) {
-        var result = window.confirm(`WARNING! It takes about 30 minutes to ensure zkill gets all the kills. We recommend you wait another ${Math.ceil(diff / 60000)} minutes before using this tool.\n\nAre you sure you wish to continue?`)
+        var result = window.confirm(`WARNING! It can take up to 60 minutes to ensure zkill gets all the kills. We recommend you wait another ${Math.ceil(diff / 60000)} minutes before using this tool.\n\nAre you sure you wish to continue?`)
 
         if (!result) {
             var loader = document.getElementsByClassName("loader")[0];
