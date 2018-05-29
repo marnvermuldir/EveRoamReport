@@ -41,6 +41,18 @@ function char_alpha_sort(a, b)
             (a.name > b.name ? 1 : 0));
 }
 
+function get_date(str)
+{
+    var date = new Date(str);
+    // Firefox date parsing workaround.
+    if (Object.prototype.toString.call(date) !== "[object Date]" || isNaN(date.getTime())) {
+        str = str.replace(/\./g, "-");
+        str = str.replace(/ /, "T").substring(0,19) + ".000Z";
+        date = new Date(str);
+    }
+    return date;
+}
+
 function get_kill_by_id(id, killList)
 {
     for (var i = 0; i < killList.length; ++i) {
@@ -89,7 +101,7 @@ function get_roam()
 
         if ((match = charNameRegex1.exec(line)) !== null) {
             name = match[2].trim();
-            var date = new Date(match[1] + " GMT");
+            var date = get_date(match[1] + " GMT");
             if (startDate === undefined || date < startDate)
                 startDate = date;
             if (endDate === undefined || date > endDate)
@@ -104,8 +116,8 @@ function get_roam()
         }
     }
 
-    var now = new Date(Date.now());
-    var threshold = new Date(now.getTime() - 30*60000);
+    var now = get_date(Date.now());
+    var threshold = get_date(now.getTime() - 30*60000);
     var diff = endDate - threshold;
     if (endDate > threshold) {
         var result = window.confirm(`WARNING! It takes about 30 minutes to ensure zkill gets all the kills. We recommend you wait another ${Math.ceil(diff / 60000)} minutes before using this tool.\n\nAre you sure you wish to continue?`)
@@ -260,7 +272,7 @@ function request_kill_batch(batch)
         for (var i = 0; i < kills.length; ++i) {
             var kill = kills[i];
             if (window.killIDs.indexOf(kill.killmail_id) >= 0) continue;
-            kill.date = new Date(kill.killmail_time);
+            kill.date = get_date(kill.killmail_time);
             window.killIDs.push(kill.killmail_id);
             window.unsortedKills.push(kill);
             var v = kill.victim;
