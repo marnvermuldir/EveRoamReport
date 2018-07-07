@@ -24,9 +24,19 @@
 //  - Detect if browser is supported (obviously, Fetch API is not supported in IE).
 
 window.knownTypes = {};
-// window.characters[id]: {name:string, isFriendly:bool, shipsFlown:[id]}
+// window.characters[id]: {name:string, alliance:id, corp:id, isFriendly:bool, shipsFlown:[id]}
 
 function numeric_sort(a, b) { return a-b; }
+
+function affiliation_sort(a, b)
+{
+    char_a = window.characters[a];
+    char_b = window.characters[b];
+    if (char_a.alliance === char_b.alliance) return char_a.corp - char_b.corp;
+    if (char_a.alliance === undefined) return -1;
+    if (char_b.alliance === undefined) return 1;
+    return char_a.alliance - char_b.alliance;
+}
 
 function kill_sort(a, b)
 {
@@ -61,6 +71,17 @@ function get_kill_by_id(id, killList)
     return undefined;
 }
 
+function is_valid_kill(kill)
+{
+    if (window.friendlies.has(kill.victim.character_id)) return true;
+
+    for (var j = 0; j < kill.attackers.length; ++j) {
+        var attacker = kill.attackers[j];
+        if (window.friendlies.has(attacker.character_id)) return true;
+    }
+    return false;
+}
+
 function mark_missing_type(id, isCharacter)
 {
     if (id === undefined) return;
@@ -83,7 +104,7 @@ function get_roam()
     window.finalNames = [];
     window.killIDs = [];
     window.unsortedKills = [];
-    window.friendlies = [];
+    window.friendlies = new Set();
     window.characters = {};
     window.unknownTypes = [];
     var charNameRegex1 = /\[ ([\d\. :]+) \] ([ a-zA-Z0-9-']{3,37}) > /;
@@ -137,7 +158,10 @@ function get_roam()
 
     request_ids_for_names(window.finalNames, true)
     .then(() => {
-        return request_all_kills(window.friendlies);
+        return request_affiliations_for_unknown_characters();
+    })
+    .then(() => {
+        return request_all_kills([...window.friendlies]);
     })
     .then((args) => {
         return request_names_for_ids(window.unknownTypes);
@@ -192,10 +216,9 @@ function request_ids_for_names_batch(names, addToFriendlies)
                 isFriendly: addToFriendlies,
                 shipsFlown:[]
             };
-            if (addToFriendlies) window.friendlies.push(chars[i].id);
+            if (addToFriendlies) window.friendlies.add(chars[i].id);
         }
 
-        window.friendlies = window.friendlies.sort(numeric_sort);
         console.log("Got batch of character IDs");
     })
 }
@@ -216,7 +239,7 @@ function request_names_for_ids(IDs)
 
 function request_names_for_ids_batch(IDs)
 {
-    var idsQuery = "https://esi.tech.ccp.is/latest/universe/names/?datasource=tranquility";
+    var idsQuery = "https://esi.tech.ccp.is/v2/universe/names/?datasource=tranquility";
 
     return fetch(new Request(idsQuery, {
         method: 'POST',
@@ -246,25 +269,110 @@ function request_names_for_ids_batch(IDs)
     })
 }
 
-function request_all_kills(characterIDs)
+function request_affiliations_for_unknown_characters()
 {
-    zkillCharacterLimit = 10;
+    esiIdCountLimit = 1000;
 
-    var count = characterIDs.length;
+    unknownCharacters = []
+    for (var key in window.characters) {
+        if (window.characters[key].corporation_id === undefined)
+            unknownCharacters.push(key);
+    }
+
+    IDs = Array.from(new Set(unknownCharacters));
+    var count = IDs.length;
     var requests = [];
-    for (var start = 0; start < count; start = start + zkillCharacterLimit) {
-        var batch = characterIDs.slice(start, start + zkillCharacterLimit);
-        requests.push(request_kill_batch(batch));
+    for (var start = 0; start < count; start = start + esiIdCountLimit) {
+        var batch = IDs.slice(start, start + esiIdCountLimit);
+        requests.push(request_affiliations_for_char_ids_batch(batch));
     }
     return Promise.all(requests);
 }
 
-function request_kill_batch(batch)
+function request_affiliations_for_char_ids_batch(IDs)
 {
-    var killQuery = "https://zkillboard.com/api/characterID/" + batch.join() + "/startTime/"+window.starttime+"00/endTime/"+window.endtime+"00/no-items/";
-    return fetch(new Request(killQuery, {method: 'GET', mode: 'cors'}))
+    var idsQuery = "https://esi.tech.ccp.is/v1/characters/affiliation/?datasource=tranquility";
+
+    return fetch(new Request(idsQuery, {
+        method: 'POST',
+        body: JSON.stringify(IDs),
+        headers: {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    }))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
+        console.log("Got batch of missing names");
+        return response.json();
+    })
+    .then(jsonData => {
+        for (var i = 0; i < jsonData.length; ++i) {
+            var entry = jsonData[i];
+            window.characters[entry.character_id].corp     = entry.corporation_id;
+            window.characters[entry.character_id].alliance = entry.alliance_id;
+        }
+    })
+}
+
+function request_all_kills(IDs)
+{
+    zkillCharacterLimit = 10;
+
+    IDs = IDs.sort(affiliation_sort);
+    var count = IDs.length;
+    start = 0;
+    end = 0;
+    requestType = "characterID";
+    var requests = [];
+
+    do {
+        startChar = window.characters[IDs[start]];
+        endCorpIdx = start+1;
+        requestId = 0;
+        length = IDs.length;
+        while (endCorpIdx < length && startChar.corp == window.characters[IDs[endCorpIdx]].corp)
+            endCorpIdx++;
+
+        endAllianceIdx = endCorpIdx;
+        while (endAllianceIdx < length && startChar.alliance == window.characters[IDs[endAllianceIdx]].alliance)
+            endAllianceIdx++;
+
+        if (endCorpIdx === start + 1) {
+            requestType = "characterID";
+            reqiestId = IDs[start];
+            end = start + 1;
+        } else if (endAllianceIdx == endCorpIdx) {
+            requestType = "corporationID";
+            reqiestId = startChar.corp;
+            end = endCorpIdx;
+        } else {
+            requestType = "allianceID";
+            reqiestId = startChar.alliance;
+            end = endAllianceIdx;
+        }
+
+        requests.push(request_kill_batch(reqiestId, requestType, 1));
+        start = end;
+    } while (start < count);
+
+    return Promise.all(requests);
+}
+
+function request_kill_batch(id, querryType, page)
+{
+    var maxZkillKills = 200;
+    var killQuery = "https://zkillboard.com/api/"+querryType+"/"+id+"/startTime/"+window.starttime+"00/endTime/"+window.endtime+"00/no-items/page/"+page+"/";
+    return fetch(new Request(killQuery, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+            'Accept-Encoding': 'gzip',
+            'User-Agent': 'EveRoamReport, Maintainer: Laser Skaron'
+        }
+    }))
+    .then(response => {
+        if (response.status != 200) throw new Error("API request failed to get kills");
         return response.json();
     })
     .then(kills => {
@@ -272,6 +380,7 @@ function request_kill_batch(batch)
         for (var i = 0; i < kills.length; ++i) {
             var kill = kills[i];
             if (window.killIDs.indexOf(kill.killmail_id) >= 0) continue;
+            if (!is_valid_kill(kill)) continue;
             kill.date = get_date(kill.killmail_time);
             window.killIDs.push(kill.killmail_id);
             window.unsortedKills.push(kill);
@@ -292,6 +401,9 @@ function request_kill_batch(batch)
             killAddCount += 1;
         }
         console.log("Added " + killAddCount + " kills");
+
+        if (kills.length == maxZkillKills)
+            return request_kill_batch(id, querryType, page + 1);
     })
 }
 
@@ -305,7 +417,7 @@ function process_kills()
 
     for (var i = 0; i < window.workingKillSet.length; ++i) {
         var kill = window.workingKillSet[i];
-        var is_friendly = window.friendlies.indexOf(kill.victim.character_id) > -1;
+        var is_friendly = window.friendlies.has(kill.victim.character_id);
         var row = document.createElement("div"); row.className = "kr-on"; table.appendChild(row);
         row.name = kill.killmail_id;
 
