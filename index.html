@@ -13,7 +13,36 @@
     <div class="page-container">
         <h1>Roam Report.</h1>
 
-        <h3>Tool currently down for maintenance... Could be a few days until I gets to fix things and get it back up...</h3>
+        <h3>Usage:</h3>
+        <p>Ask people to type in chat during the fleet. If they don't type, you won't see their loss mails or solo kills.</p>
+        <p>Wait a while for kills to get updated on zKillboard after the roam has ended. (30-60 mins? no idea how long it takes)</p>
+        <p>Remember to be considerate and not spam zKill with this tool...</p>
+        <p>And paste the fleet <a href=https://wiki.eveuniversity.org/EVE_logs>chat log</a> here. If you got disconnected during the fleet and your chat log is split into multiple files, just paste all of them.</p>
+
+        <textarea class="input-fleet-text" name="names" placeholder="Paste the chat log of a roam here..."></textarea>
+        <button class="advance-button" onclick="get_roam()"><i class="fa fa-chevron-down" aria-hidden="true"></i> Process fleet log <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
+        <div class="loader" style="display: none;"></div>
+
+        <div class="step-two" style="display: none;">
+            <p>I think this is what happened with your roam, but I can't be sure. Drag over kills to include/exclude them from the AAR. Toggle fight starts to add separators with timestamps before those kills.</p>
+
+            <div class="adjust-aar">
+                <div class="kill-display" name="killdisplay">
+                    <div class="krh"><div class="kh">New fight?</div><div class="kh">Time</div><div class="kh">Kill/Loss</div><div class="kh">Ship (points)</div><div class="kh">Victim</div><div class="kh">Final Blow</div><div class="kh">Location</div><div class="kh">ISK</div></div>
+                </div>
+            </div>
+
+            <center>
+            <label class="template-label"> AAR Template: </label> <select name="template" class="template-select">
+                <option value="simple">Simple</option>
+                <option value="eUni">Eve Uni Forums (ORCON)</option>
+            </select>
+            </center>
+
+            <button class="advance-button" onclick="get_forum_post()"><i class="fa fa-chevron-down" aria-hidden="true"></i> Generate AAR template <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
+
+            <textarea class="output-aar" name="output" placeholder="Output..."></textarea>
+        </div>
 
         <div><span class="credits">This tool is brought to you by Laser Skaron. Eve-mail if you have any questions.</span></div>
     </div>
