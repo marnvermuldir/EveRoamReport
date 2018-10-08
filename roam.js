@@ -24,6 +24,8 @@
 //  - Detect if browser is supported (obviously, Fetch API is not supported in IE).
 
 window.knownTypes = {};
+window.knownKillData = {};
+window.partialKillData = {};
 // window.characters[id]: {name:string, alliance:id, corp:id, isFriendly:bool, shipsFlown:[id]}
 
 function numeric_sort(a, b) { return a-b; }
@@ -106,6 +108,7 @@ function get_roam()
     window.unsortedKills = [];
     window.friendlies = new Set();
     window.characters = {};
+    window.partialKillData = {};
     window.unknownTypes = [];
     var charNameRegex1 = /\[ ([\d\. :]+) \] ([ a-zA-Z0-9-']{3,37}) > /;
     var charNameRegex2 = /^\s*([ a-zA-Z0-9-']{3,37})\s*$/
@@ -162,6 +165,9 @@ function get_roam()
     })
     .then(() => {
         return request_all_kills([...window.friendlies]);
+    })
+    .then(() => {
+        return request_full_kill_data(window.partialKillData);
     })
     .then((args) => {
         return request_names_for_ids(window.unknownTypes);
@@ -375,15 +381,54 @@ function request_kill_batch(id, querryType, page)
         if (response.status != 200) throw new Error("API request failed to get kills");
         return response.json();
     })
-    .then(kills => {
-        var killAddCount = 0;
-        for (var i = 0; i < kills.length; ++i) {
-            var kill = kills[i];
+    .then(zkillData => {
+        for (var i = 0; i < zkillData.length; ++i) {
+            var partialKill = zkillData[i];
+            if (window.knownKillData[partialKill.killmail_id] === undefined) {
+                window.partialKillData[partialKill.killmail_id] = partialKill;
+            }
+        }
+        console.log("Obtained " + zkillData.length + " kills from zKill");
+
+        if (zkillData.length == maxZkillKills)
+            return request_kill_batch(id, querryType, page + 1);
+    })
+}
+
+function request_full_kill_data(partialKillData)
+{
+    getKillQuerry = (id, hash) => { return "https://esi.tech.ccp.is/v1/killmails/"+id+"/"+hash+"/"; }
+    queries = [];
+    for (var id in partialKillData) {
+        query = fetch(new Request(getKillQuerry(id, partialKillData[id].zkb.hash), {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'accept': 'application/json'
+            }
+        }))
+        .then(response => {
+            if (response.status != 200) throw new Error("API request failed to get list of character IDs");
+            return response.json();
+        })
+        queries.push(query);
+    }
+    return Promise.all(queries)
+    .then(results => {
+        for (var i = 0; i < results.length; ++i) {
+            r = results[i];
+            kill = window.partialKillData[r.killmail_id];
+            kill.attackers = r.attackers;
+            kill.solar_system_id = r.solar_system_id;
+            kill.victim = r.victim;
+            kill.moon_id = r.moon_id;
+            kill.war_id = r.war_id;
+            kill.killmail_time = r.killmail_time;
+            window.knownKillData[r.killmail_id] = kill;
+
             if (window.killIDs.indexOf(kill.killmail_id) >= 0) continue;
             if (!is_valid_kill(kill)) continue;
             kill.date = get_date(kill.killmail_time);
-            window.killIDs.push(kill.killmail_id);
-            window.unsortedKills.push(kill);
             var v = kill.victim;
 
             mark_missing_type(v.ship_type_id, false);
@@ -398,12 +443,10 @@ function request_kill_batch(id, querryType, page)
 
                 mark_missing_type(attacker.ship_type_id, false);
             }
-            killAddCount += 1;
-        }
-        console.log("Added " + killAddCount + " kills");
 
-        if (kills.length == maxZkillKills)
-            return request_kill_batch(id, querryType, page + 1);
+            window.killIDs.push(kill.killmail_id);
+            window.unsortedKills.push(kill);
+        }
     })
 }
 
