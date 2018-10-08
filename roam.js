@@ -383,10 +383,11 @@ function request_kill_batch(id, querryType, page)
     })
     .then(zkillData => {
         for (var i = 0; i < zkillData.length; ++i) {
-            var partialKill = zkillData[i];
-            if (window.knownKillData[partialKill.killmail_id] === undefined) {
-                window.partialKillData[partialKill.killmail_id] = partialKill;
+            var partialKill = window.knownKillData[zkillData[i].killmail_id];
+            if (partialKill === undefined) {
+                partialKill = zkillData[i];
             }
+            window.partialKillData[partialKill.killmail_id] = partialKill;
         }
         console.log("Obtained " + zkillData.length + " kills from zKill");
 
@@ -400,6 +401,13 @@ function request_full_kill_data(partialKillData)
     getKillQuerry = (id, hash) => { return "https://esi.tech.ccp.is/v1/killmails/"+id+"/"+hash+"/"; }
     queries = [];
     for (var id in partialKillData) {
+        if (partialKillData[id].victim !== undefined) {
+            queries.push(new Promise(function(resolve, reject) {
+                resolve(partialKillData[id]);
+            }));
+            continue;
+        }
+
         query = fetch(new Request(getKillQuerry(id, partialKillData[id].zkb.hash), {
             method: 'GET',
             headers: {
