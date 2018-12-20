@@ -198,7 +198,7 @@ function request_ids_for_names(names, addToFriendlies)
 
 function request_ids_for_names_batch(names, addToFriendlies)
 {
-    var nameQuery = "https://esi.tech.ccp.is/v1/universe/ids/?datasource=tranquility&language=en-us";
+    var nameQuery = "https://esi.evetech.net/v1/universe/ids/?datasource=tranquility&language=en-us";
 
     return fetch(new Request(nameQuery, {
         method: 'POST',
@@ -245,7 +245,7 @@ function request_names_for_ids(IDs)
 
 function request_names_for_ids_batch(IDs)
 {
-    var idsQuery = "https://esi.tech.ccp.is/v2/universe/names/?datasource=tranquility";
+    var idsQuery = "https://esi.evetech.net/v2/universe/names/?datasource=tranquility";
 
     return fetch(new Request(idsQuery, {
         method: 'POST',
@@ -297,7 +297,7 @@ function request_affiliations_for_unknown_characters()
 
 function request_affiliations_for_char_ids_batch(IDs)
 {
-    var idsQuery = "https://esi.tech.ccp.is/v1/characters/affiliation/?datasource=tranquility";
+    var idsQuery = "https://esi.evetech.net/v1/characters/affiliation/?datasource=tranquility";
 
     return fetch(new Request(idsQuery, {
         method: 'POST',
@@ -398,7 +398,7 @@ function request_kill_batch(id, querryType, page)
 
 function request_full_kill_data(partialKillData)
 {
-    getKillQuerry = (id, hash) => { return "https://esi.tech.ccp.is/v1/killmails/"+id+"/"+hash+"/"; }
+    getKillQuerry = (id, hash) => { return "https://esi.evetech.net/v1/killmails/"+id+"/"+hash+"/"; }
     queries = [];
     for (var id in partialKillData) {
         if (partialKillData[id].victim !== undefined) {
