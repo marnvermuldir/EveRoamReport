@@ -704,6 +704,22 @@ function window_mouse_up(event) {
     mouseDown = false;
 };
 
+function window_drop(event) {
+    if (event.dataTransfer.files.length == 0) return;
+    if (event.dataTransfer.files[0].type != 'text/plain') return;
+
+    reader = new FileReader()
+    reader.readAsText(event.dataTransfer.files[0])
+    reader.onloadend = function() {
+        document.getElementsByName("names")[0].value = reader.result;
+    }
+};
+
+function prevent_defaults (e) {
+  e.preventDefault()
+  e.stopPropagation()
+}
+
 window.onload = function()
 {
     var table = document.getElementsByName("killdisplay")[0];
@@ -714,4 +730,9 @@ window.onload = function()
     table.addEventListener('touchmove', kills_update_include_state);
     document.addEventListener('mouseup', window_mouse_up);
     document.addEventListener('touchend', window_mouse_up);
+    document.addEventListener('drop', prevent_defaults, false);
+    document.addEventListener('dragenter', prevent_defaults, false);
+    document.addEventListener('dragover', prevent_defaults, false);
+    document.addEventListener('dragleave', prevent_defaults, false);
+    document.addEventListener('drop', window_drop);
 }
