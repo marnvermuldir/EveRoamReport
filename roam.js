@@ -28,6 +28,57 @@ window.knownKillData = {};
 window.partialKillData = {};
 // window.characters[id]: {name:string, alliance:id, corp:id, isFriendly:bool, shipsFlown:[id]}
 
+request_params = {
+    names_batch: {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    },
+    esi_ids: {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    },
+    esi_affiliations: {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    },
+    zkill_batch: {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+            'Accept-Encoding': 'gzip',
+        }
+    },
+    esi_kill_data: {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    }
+};
+
+function get_url(kind, args) {
+    if (kind == 'names_batch')
+        return 'https://esi.evetech.net/v1/universe/ids/?datasource=tranquility'
+    if (kind == 'esi_ids')
+        return 'https://esi.evetech.net/v2/universe/names/?datasource=tranquility'
+    if (kind == 'esi_affiliations')
+        return 'https://esi.evetech.net/v1/characters/affiliation/?datasource=tranquility'
+    if (kind == 'zkill_batch')
+        return `https://zkillboard.com/api/${args.querryType}/${args.id}/startTime/${args.startTime}00/endTime/${args.endTime}00/no-items/page/${args.page}/`
+    if (kind == 'esi_kill_data')
+        return `https://esi.evetech.net/v1/killmails/${args.killmail_id}/${args.killmail_hash}/`
+}
+
 function numeric_sort(a, b) { return a-b; }
 
 function affiliation_sort(a, b)
@@ -198,16 +249,11 @@ function request_ids_for_names(names, addToFriendlies)
 
 function request_ids_for_names_batch(names, addToFriendlies)
 {
-    var nameQuery = "https://esi.evetech.net/v1/universe/ids/?datasource=tranquility&language=en-us";
+    url = get_url('names_batch');
+    url_params = request_params.names_batch;
+    url_params.body = JSON.stringify(names);
 
-    return fetch(new Request(nameQuery, {
-        method: 'POST',
-        body: JSON.stringify(names),
-        headers: {
-            'Content-Type': 'application/json',
-            'accept': 'application/json'
-        }
-    }))
+    return fetch(new Request(url, url_params))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
         return response.json();
@@ -245,16 +291,11 @@ function request_names_for_ids(IDs)
 
 function request_names_for_ids_batch(IDs)
 {
-    var idsQuery = "https://esi.evetech.net/v2/universe/names/?datasource=tranquility";
+    url = get_url('esi_ids');
+    url_params = request_params.esi_ids;
+    url_params.body = JSON.stringify(IDs);
 
-    return fetch(new Request(idsQuery, {
-        method: 'POST',
-        body: JSON.stringify(IDs),
-        headers: {
-            'Content-Type': 'application/json',
-            'accept': 'application/json'
-        }
-    }))
+    return fetch(new Request(url, url_params))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
         console.log("Got batch of missing names");
@@ -297,16 +338,11 @@ function request_affiliations_for_unknown_characters()
 
 function request_affiliations_for_char_ids_batch(IDs)
 {
-    var idsQuery = "https://esi.evetech.net/v1/characters/affiliation/?datasource=tranquility";
+    url = get_url('esi_affiliations');
+    url_params = request_params.esi_affiliations;
+    url_params.body = JSON.stringify(IDs);
 
-    return fetch(new Request(idsQuery, {
-        method: 'POST',
-        body: JSON.stringify(IDs),
-        headers: {
-            'Content-Type': 'application/json',
-            'accept': 'application/json'
-        }
-    }))
+    return fetch(new Request(url, url_params))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get list of character IDs");
         console.log("Got batch of missing names");
@@ -368,15 +404,16 @@ function request_all_kills(IDs)
 function request_kill_batch(id, querryType, page)
 {
     var maxZkillKills = 200;
-    var killQuery = "https://zkillboard.com/api/"+querryType+"/"+id+"/startTime/"+window.starttime+"00/endTime/"+window.endtime+"00/no-items/page/"+page+"/";
-    return fetch(new Request(killQuery, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-            'Accept-Encoding': 'gzip',
-            'User-Agent': 'EveRoamReport, Maintainer: Laser Skaron'
-        }
-    }))
+    url = get_url('zkill_batch', {
+        querryType: querryType,
+        id: id,
+        startTime: window.starttime,
+        endTime: window.endtime,
+        page: page
+    });
+    url_params = request_params.zkill_batch;
+
+    return fetch(new Request(url, url_params))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get kills");
         return response.json();
@@ -398,7 +435,6 @@ function request_kill_batch(id, querryType, page)
 
 function request_full_kill_data(partialKillData)
 {
-    getKillQuerry = (id, hash) => { return "https://esi.evetech.net/v1/killmails/"+id+"/"+hash+"/"; }
     queries = [];
     for (var id in partialKillData) {
         if (partialKillData[id].victim !== undefined) {
@@ -408,13 +444,10 @@ function request_full_kill_data(partialKillData)
             continue;
         }
 
-        query = fetch(new Request(getKillQuerry(id, partialKillData[id].zkb.hash), {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'accept': 'application/json'
-            }
-        }))
+        url = get_url('esi_kill_data', { killmail_id: id, killmail_hash: partialKillData[id].zkb.hash })
+        url_params = request_params.esi_kill_data;
+
+        query = fetch(new Request(url, url_params))
         .then(response => {
             if (response.status != 200) throw new Error("API request failed to get list of character IDs");
             return response.json();
