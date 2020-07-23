@@ -68,15 +68,15 @@ request_params = {
 
 function get_url(kind, args) {
     if (kind == 'names_batch')
-        return 'https://esi.evetech.net/universe/ids/?datasource=tranquility'
+        return 'https://esi.evetech.net/v1/universe/ids/?datasource=tranquility'
     if (kind == 'esi_ids')
-        return 'https://esi.evetech.net/universe/names/?datasource=tranquility'
+        return 'https://esi.evetech.net/v3/universe/names/?datasource=tranquility'
     if (kind == 'esi_affiliations')
-        return 'https://esi.evetech.net/characters/affiliation/?datasource=tranquility'
+        return 'https://esi.evetech.net/v1/characters/affiliation/?datasource=tranquility'
     if (kind == 'zkill_batch')
         return `https://zkillboard.com/api/${args.querryType}/${args.id}/pastSeconds/604800/no-items/page/${args.page}/`
     if (kind == 'esi_kill_data')
-        return `https://esi.evetech.net/killmails/${args.killmail_id}/${args.killmail_hash}/`
+        return `https://esi.evetech.net/v1/killmails/${args.killmail_id}/${args.killmail_hash}/`
 }
 
 function numeric_sort(a, b) { return a-b; }
