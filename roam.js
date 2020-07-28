@@ -66,6 +66,11 @@ request_params = {
     }
 };
 
+// sleep time expects milliseconds
+function sleep (time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
+}
+
 function get_url(kind, args) {
     if (kind == 'names_batch')
         return 'https://esi.evetech.net/v1/universe/ids/?datasource=tranquility'
@@ -429,7 +434,9 @@ function request_kill_batch(id, querryType, page)
         console.log("Obtained " + zkillData.length + " kills from zKill");
 
         if (zkillData.length == maxZkillKills)
-            return request_kill_batch(id, querryType, page + 1);
+            sleep(1500).then(() => {
+                return request_kill_batch(id, querryType, page + 1);
+            });
     })
 }
 
