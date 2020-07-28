@@ -69,7 +69,6 @@ request_params = {
 // sleep time expects milliseconds
 function sleep (time) {
   return new Promise((resolve) => setTimeout(resolve, time));
-  console.log("Waiting 1.5s to keep zKillboard happy.");
 }
 
 function get_url(kind, args) {
@@ -436,6 +435,7 @@ function request_kill_batch(id, querryType, page)
 
         if (zkillData.length == maxZkillKills)
             sleep(1500).then(() => {
+                console.log("Waiting 1.5s to keep zKillboard happy.");
                 return request_kill_batch(id, querryType, page + 1);
             });
     })
