@@ -66,11 +66,6 @@ request_params = {
     }
 };
 
-// sleep time expects milliseconds
-function sleep (time) {
-  return new Promise((resolve) => setTimeout(resolve, time));
-}
-
 function get_url(kind, args) {
     if (kind == 'names_batch')
         return 'https://esi.evetech.net/v1/universe/ids/?datasource=tranquility'
