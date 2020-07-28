@@ -418,8 +418,6 @@ function request_kill_batch(id, querryType, page)
     });
     url_params = request_params.zkill_batch;
 
-    sleep(1500).then(() => {
-    console.log("Waiting 1.5s to keep zKillboard happy.");
     return fetch(new Request(url, url_params))
     .then(response => {
         if (response.status != 200) throw new Error("API request failed to get kills");
@@ -437,7 +435,6 @@ function request_kill_batch(id, querryType, page)
 
         if (zkillData.length == maxZkillKills)
             return request_kill_batch(id, querryType, page + 1);
-    });
     })
 }
 
