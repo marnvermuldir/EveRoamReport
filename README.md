@@ -4,7 +4,9 @@ A tool for generating reports for a fleet roam.
 
 # Usage
 
-Currently hosted here: https://laserbeam3.github.io/EveRoamReport/
+Currently hosted here: https://thatcasualmatt.github.io/EveRoamReport
+
+THIS TOOL WORKS BEST IN EDGE OR FIREFOX. YOU MUST CLICK PROCESS FLEET LOG SEVERAL TIMES BEFORE A FINAL REPORT IS GENERATED!
 
 Input: A fleet chat log.
 
