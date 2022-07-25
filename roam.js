@@ -234,6 +234,34 @@ function get_roam() {
     });
 }
 
+function fetch_ratelimit_retry(request, options = {}) {
+  const default_options = {
+    delay: 1000,
+    max_retries: 3,
+  };
+
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const retry_request = (delay, retries) =>
+    new Promise((resolve, reject) => {
+      return fetch(request)
+        .then(resolve)
+        .catch((error) => {
+          if (retries > 0) {
+            return wait(delay)
+              .then(retry_request.bind(null, retries - 1))
+              .then(resolve)
+              .catch(reject);
+          }
+          return reject(error);
+        });
+    });
+
+  opts = Object.assign(default_options, options);
+
+  return retry_request(opts["delay"], opts["max_retries"]);
+}
+
 function request_ids_for_names(names, addToFriendlies) {
   esiIdCountLimit = 1000;
 
@@ -252,7 +280,7 @@ function request_ids_for_names_batch(names, addToFriendlies) {
   url_params = request_params.names_batch;
   url_params.body = JSON.stringify(names);
 
-  return fetch(new Request(url, url_params))
+  return fetch_ratelimit_retry(new Request(url, url_params))
     .then((response) => {
       if (response.status != 200)
         throw new Error("API request failed to get list of character IDs");
@@ -293,7 +321,7 @@ function request_names_for_ids_batch(IDs) {
   url_params = request_params.esi_ids;
   url_params.body = JSON.stringify(IDs);
 
-  return fetch(new Request(url, url_params))
+  return fetch_ratelimit_retry(new Request(url, url_params))
     .then((response) => {
       if (response.status != 200)
         throw new Error("API request failed to get list of character IDs");
@@ -339,7 +367,7 @@ function request_affiliations_for_char_ids_batch(IDs) {
   url_params = request_params.esi_affiliations;
   url_params.body = JSON.stringify(IDs);
 
-  return fetch(new Request(url, url_params))
+  return fetch_ratelimit_retry(new Request(url, url_params))
     .then((response) => {
       if (response.status != 200)
         throw new Error("API request failed to get list of character IDs");
@@ -397,7 +425,7 @@ function request_all_kills(IDs) {
       end = endAllianceIdx;
     }
 
-    requests.push(request_kill_batch(reqiestId, requestType, 1));
+    if (reqiestId) requests.push(request_kill_batch(reqiestId, requestType, 1));
     start = end;
   } while (start < count);
 
@@ -415,7 +443,7 @@ function request_kill_batch(id, querryType, page) {
   });
   url_params = request_params.zkill_batch;
 
-  return fetch(new Request(url, url_params))
+  return fetch_ratelimit_retry(new Request(url, url_params))
     .then((response) => {
       if (response.status != 200)
         throw new Error("API request failed to get kills");
@@ -454,11 +482,13 @@ function request_full_kill_data(partialKillData) {
     });
     url_params = request_params.esi_kill_data;
 
-    query = fetch(new Request(url, url_params)).then((response) => {
-      if (response.status != 200)
-        throw new Error("API request failed to get list of character IDs");
-      return response.json();
-    });
+    query = fetch_ratelimit_retry(new Request(url, url_params)).then(
+      (response) => {
+        if (response.status != 200)
+          throw new Error("API request failed to get killmail data.");
+        return response.json();
+      }
+    );
     queries.push(query);
   }
   return Promise.all(queries).then((results) => {
