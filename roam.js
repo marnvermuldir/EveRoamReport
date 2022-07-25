@@ -244,7 +244,7 @@ function get_roam() {
 
 function fetch_ratelimit_retry(request, options = {}) {
   const default_options = {
-    delay: 2000,
+    delay: 5000,
     max_retries: 3,
   };
 
