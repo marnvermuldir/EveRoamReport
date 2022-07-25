@@ -6,7 +6,7 @@ Forked from [ThatCasualMatt / EveRoamReport](https://github.com/ThatCasualMatt/E
 
 # Usage
 
-Currently hosted here: https://marnvermuldir.github.io/EveRoamReport
+Currently hosted here: https://everoamreport.minin.io/
 
 THIS TOOL WORKS BEST IN EDGE OR FIREFOX. YOU MUST CLICK PROCESS FLEET LOG SEVERAL TIMES BEFORE A FINAL REPORT IS GENERATED!
 
