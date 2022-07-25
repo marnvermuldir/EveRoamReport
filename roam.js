@@ -148,8 +148,14 @@ function mark_missing_type(id, isCharacter) {
 }
 
 function get_roam() {
+  const genButton = document.getElementsByClassName("advance-button")[0];
   var loader = document.getElementsByClassName("loader")[0];
+
+  if (genButton.disabled == true) {
+    return;
+  }
   loader.style.display = "inherit";
+  genButton.disabled = true;
 
   var elem = document.getElementsByName("names")[0];
   var nameList = elem.value.split("\n");
@@ -201,6 +207,7 @@ function get_roam() {
     if (!result) {
       var loader = document.getElementsByClassName("loader")[0];
       loader.style.display = "none";
+      genButton.disabled = false;
       return;
     }
   }
@@ -231,6 +238,7 @@ function get_roam() {
       console.error(error);
       var loader = document.getElementsByClassName("loader")[0];
       loader.style.display = "none";
+      genButton.disabled = false;
     });
 }
 
@@ -647,10 +655,13 @@ function process_kills() {
     cell.appendChild(t);
 
     update_kill_display(kill);
+    console.log("Kills processed.");
   }
 
   var loader = document.getElementsByClassName("loader")[0];
   loader.style.display = "none";
+  const genButton = document.getElementsByClassName("advance-button")[0];
+  genButton.disabled = false;
   var stepTwo = document.getElementsByClassName("step-two")[0];
   stepTwo.style.display = "inherit";
 }
