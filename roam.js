@@ -244,7 +244,7 @@ function get_roam() {
 
 function fetch_ratelimit_retry(request, options = {}) {
   const default_options = {
-    delay: 1000,
+    delay: 2000,
     max_retries: 3,
   };
 
@@ -253,14 +253,24 @@ function fetch_ratelimit_retry(request, options = {}) {
   const retry_request = (delay, retries) =>
     new Promise((resolve, reject) => {
       return fetch(request)
-        .then(resolve)
+        .then((response) => {
+          if (response.status != 200) {
+            console.log(
+              "Non-OK: " + response.url + " [" + response.status + "]"
+            );
+            throw "Non-okay request status";
+          }
+          resolve(response);
+        })
         .catch((error) => {
           if (retries > 0) {
+            console.log("Retrying: " + request.url + " Error: " + error);
             return wait(delay)
-              .then(retry_request.bind(null, retries - 1))
+              .then(retry_request.bind(null, delay, retries - 1))
               .then(resolve)
               .catch(reject);
           }
+          console.log("Rejecting: " + error);
           return reject(error);
         });
     });
